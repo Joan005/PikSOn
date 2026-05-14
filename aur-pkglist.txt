@@ -1,0 +1,8 @@
+brave-bin
+pwvucontrol
+python-elgato-streamdeck
+streamdeck-ui
+ttf-unifraktur
+visual-studio-code-bin
+yay
+yay-debug
