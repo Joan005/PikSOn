@@ -1,0 +1,6 @@
+[Unit]
+Description=Backup dotfiles a GitHub
+
+[Service]
+Type=oneshot
+ExecStart=/home/pikson/dotfiles/backup.sh
