@@ -1,0 +1,40 @@
+window {
+    background: rgba(0, 0, 0, 0.01);
+    border-style: none;
+}
+
+#box {
+    background: rgba(30, 30, 46, 0.90);
+    border-radius: 14px;
+    padding: 4px;
+    margin: 54px 4px 0 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+#active {
+    border-bottom: solid 2px;
+    border-color: rgba(203, 166, 247, 0.8);
+}
+
+button, image {
+    background: none;
+    border-style: none;
+    box-shadow: none;
+}
+
+button {
+    padding: 5px 3px;
+    margin: 2px 0;
+    min-width: 50px;
+    border-radius: 8px;
+    font-size: 0;
+}
+
+button:hover {
+    background-color: rgba(203, 166, 247, 0.18);
+    border-radius: 8px;
+}
+
+button:focus {
+    box-shadow: none;
+}

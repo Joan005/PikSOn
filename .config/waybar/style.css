@@ -1,0 +1,209 @@
+* {
+    font-family: "JetBrainsMono Nerd Font", monospace;
+    font-size: 16px;
+    border: none;
+    border-radius: 0;
+    min-height: 0;
+}
+
+window#waybar {
+    background: transparent;
+}
+
+.modules-left,
+.modules-center,
+.modules-right {
+    background: transparent;
+    padding: 0;
+    margin: 0;
+}
+
+/* ── Pill base ── */
+#workspaces,
+#window,
+#clock,
+#mpris,
+#wireplumber,
+#battery,
+#tray,
+#custom-power,
+#custom-whisper {
+    background: rgba(30, 30, 46, 0.90);
+    border-radius: 100px;
+    margin: 0 3px;
+    padding: 0 14px;
+    color: #cdd6f4;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+/* ── Workspaces ── */
+#workspaces {
+    padding: 0 6px;
+    background: rgba(30, 30, 46, 0.90);
+}
+
+#workspaces button {
+    padding: 2px 9px;
+    color: rgba(205, 214, 244, 0.35);
+    background: transparent;
+    border-radius: 100px;
+    transition: all 0.2s ease;
+    box-shadow: none;
+}
+
+#workspaces button:hover {
+    background: rgba(203, 166, 247, 0.18);
+    color: #cba6f7;
+}
+
+#workspaces button.active {
+    background: #cba6f7;
+    color: #1e1e2e;
+    box-shadow: 0 0 12px rgba(203, 166, 247, 0.45);
+}
+
+#workspaces button.urgent {
+    background: rgba(243, 139, 168, 0.25);
+    color: #f38ba8;
+}
+
+/* ── Window title ── */
+#window {
+    color: rgba(205, 214, 244, 0.65);
+}
+
+/* ── Clock ── */
+#clock {
+    color: #89b4fa;
+    font-weight: bold;
+    background: rgba(137, 180, 250, 0.14);
+    border: 1px solid rgba(137, 180, 250, 0.22);
+    padding: 0 20px;
+}
+
+/* ── Spotify ── */
+#mpris {
+    color: #a6e3a1;
+    background: rgba(30, 166, 101, 0.13);
+    border: 1px solid rgba(30, 166, 101, 0.22);
+}
+
+#mpris.paused {
+    color: rgba(166, 227, 161, 0.5);
+    border-color: rgba(30, 166, 101, 0.12);
+}
+
+/* ── Audio ── */
+#wireplumber {
+    color: #f9e2af;
+}
+
+#wireplumber.muted {
+    color: rgba(249, 226, 175, 0.35);
+}
+
+/* ── Battery ── */
+#battery {
+    color: #a6e3a1;
+}
+
+#battery.warning {
+    color: #f9e2af;
+}
+
+#battery.critical {
+    color: #f38ba8;
+    animation: blink 0.5s linear infinite alternate;
+}
+
+@keyframes blink {
+    to { opacity: 0.25; }
+}
+
+/* ── Tray ── */
+#tray {
+    padding: 0 10px;
+}
+
+#tray > .passive {
+    -gtk-icon-effect: dim;
+}
+
+#tray > .needs-attention {
+    -gtk-icon-effect: highlight;
+    background-color: rgba(243, 139, 168, 0.28);
+    border-radius: 100px;
+}
+
+/* ── Whisper REC indicator ── */
+#custom-whisper {
+    color: #f38ba8;
+    font-weight: bold;
+    padding: 0 12px;
+    animation: blink 1s linear infinite alternate;
+}
+
+/* ── Power button ── */
+#custom-power {
+    color: #f38ba8;
+    font-size: 15px;
+    background: rgba(243, 139, 168, 0.13);
+    border: 1px solid rgba(243, 139, 168, 0.22);
+    padding: 0 16px;
+}
+
+#custom-power:hover {
+    background: rgba(243, 139, 168, 0.28);
+    box-shadow: 0 0 12px rgba(243, 139, 168, 0.35);
+}
+
+/* ── Tooltip ── */
+tooltip {
+    background: rgba(24, 24, 37, 0.96);
+    border: 1px solid rgba(203, 166, 247, 0.35);
+    border-radius: 14px;
+    color: #cdd6f4;
+}
+
+/* ── Taskbar vertical ── */
+#taskbar {
+    background: rgba(30, 30, 46, 0.90);
+    border-radius: 14px;
+    margin: 3px 4px;
+    padding: 4px 3px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
+#taskbar button {
+    background: transparent;
+    border-radius: 8px;
+    padding: 4px 3px;
+    margin: 2px 0;
+    min-width: 46px;
+    min-height: 36px;
+    transition: all 0.2s ease;
+    box-shadow: none;
+}
+
+#taskbar button:hover {
+    background: rgba(203, 166, 247, 0.18);
+}
+
+#taskbar button.active {
+    background: rgba(203, 166, 247, 0.25);
+}
+
+#taskbar button > label {
+    font-size: 0;
+    min-width: 0;
+    min-height: 0;
+}
+
+/* ── Tray vertical ── */
+#tray {
+    background: rgba(30, 30, 46, 0.90);
+    border-radius: 14px;
+    margin: 3px 4px;
+    padding: 6px 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
