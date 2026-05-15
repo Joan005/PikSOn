@@ -24,6 +24,7 @@ window#waybar {
 #clock,
 #mpris,
 #wireplumber,
+#custom-volume,
 #battery,
 #tray,
 #custom-power,
@@ -93,13 +94,40 @@ window#waybar {
     border-color: rgba(30, 166, 101, 0.12);
 }
 
-/* ── Audio ── */
+/* ── Wireplumber ── */
 #wireplumber {
-    color: #f9e2af;
+    color: #89b4fa;
+    font-weight: bold;
+    background: rgba(137, 180, 250, 0.14);
+    border: 1px solid rgba(137, 180, 250, 0.22);
+    padding: 0 20px;
 }
 
 #wireplumber.muted {
+    color: rgba(137, 180, 250, 0.35);
+}
+
+/* ── Audio ── */
+#custom-volume {
+    color: #f9e2af;
+    font-family: "JetBrainsMono Nerd Font", monospace;
+    letter-spacing: -0.5px;
+}
+
+#custom-volume.muted {
     color: rgba(249, 226, 175, 0.35);
+}
+
+#custom-volume.high {
+    color: #f9e2af;
+}
+
+#custom-volume.medium {
+    color: #f9e2af;
+}
+
+#custom-volume.low {
+    color: rgba(249, 226, 175, 0.7);
 }
 
 /* ── Battery ── */
@@ -146,10 +174,12 @@ window#waybar {
 /* ── Power button ── */
 #custom-power {
     color: #f38ba8;
-    font-size: 15px;
+    font-size: 16px;
     background: rgba(243, 139, 168, 0.13);
     border: 1px solid rgba(243, 139, 168, 0.22);
-    padding: 0 16px;
+    min-width: 0;
+    padding: 0 8px;
+    margin: 0 3px;
 }
 
 #custom-power:hover {

@@ -8,9 +8,9 @@
     "margin-left": 12,
     "margin-right": 12,
 
-    "modules-left": ["hyprland/workspaces", "hyprland/window"],
-    "modules-center": ["custom/whisper", "clock", "mpris"],
-    "modules-right": ["wireplumber", "battery", "custom/power"],
+    "modules-left": ["custom/power", "hyprland/workspaces", "hyprland/window"],
+    "modules-center": ["custom/whisper", "clock", "mpris", "wireplumber"],
+    "modules-right": ["battery"],
 
     "hyprland/workspaces": {
         "format": "{icon}",
@@ -89,8 +89,9 @@
     },
 
     "custom/power": {
-        "format": "⏻",
-        "on-click": "bash -c 'ACTION=$(printf \"Apagar\nReiniciar\nCerrar sesión\nSuspender\" | wofi --dmenu --prompt \"Power\" --lines 4 --width 200) && case $ACTION in Apagar) systemctl poweroff;; Reiniciar) systemctl reboot;; \"Cerrar sesión\") hyprctl dispatch exit;; Suspender) systemctl suspend;; esac'"
+        "format": "󰐥",
+        "on-click": "~/.config/waybar/scripts/power.sh",
+        "tooltip": false
     }
 },
 
@@ -99,7 +100,7 @@
     "layer": "top",
     "position": "right",
     "width": 75,
-    "margin-top": 8,
+    "margin-top": 62,
     "margin-bottom": 8,
     "margin-right": 8,
 
