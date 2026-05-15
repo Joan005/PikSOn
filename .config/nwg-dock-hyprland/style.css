@@ -12,8 +12,7 @@ window {
 }
 
 #active {
-    border-bottom: solid 2px;
-    border-color: rgba(203, 166, 247, 0.8);
+    border-bottom: none;
 }
 
 button, image {
