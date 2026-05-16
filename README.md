@@ -198,3 +198,76 @@ El script instala automáticamente:
 - Cormorant
 - Unifraktur
 - Noto Fonts
+
+---
+
+## 5. Atajos de teclado
+
+> `Super` = tecla Windows
+
+### Abrir aplicaciones
+| Atajo | Acción |
+|-------|--------|
+| `Super + Enter` | Terminal (Kitty) |
+| `Super + C` | Claude (en terminal) |
+| `Super + B` | Brave |
+| `Super + W` | WhatsApp Web (Brave) |
+| `Super + D` | Discord |
+| `Super + V` | VS Code |
+| `Super + E` | Nautilus (archivos) |
+| `Super + S` | Spotify |
+| `Super + Shift + S` | Steam |
+| `Super + Space` | Lanzador de apps (Wofi) |
+| `Super + Q` | Transcripción por voz (Whisper) |
+
+### Gestión de ventanas
+| Atajo | Acción |
+|-------|--------|
+| `Super + Shift + Q` | Cerrar ventana activa |
+| `Super + Backspace` | Cerrar ventana activa |
+| `Super + F` | Pantalla completa |
+| `Super + Shift + F` | Flotante / fijo |
+| `Super + P` | Pseudotile |
+| `Super + J` | Cambiar split |
+| `Super + L` | Bloquear pantalla (Hyprlock) |
+| `Super + Shift + E` | Salir de Hyprland |
+
+### Foco y movimiento
+| Atajo | Acción |
+|-------|--------|
+| `Super + ←↑↓→` | Mover foco entre ventanas |
+| `Super + Shift + ←↑↓→` | Mover ventana |
+| `Super + Ctrl + ←↑↓→` | Redimensionar ventana |
+
+### Workspaces
+| Atajo | Acción |
+|-------|--------|
+| `Super + 1-5` | Ir al workspace 1-5 |
+| `Super + Shift + 1-5` | Mover ventana al workspace 1-5 |
+| `Super + Rueda arriba/abajo` | Workspace siguiente/anterior |
+
+### Capturas de pantalla
+| Atajo | Acción |
+|-------|--------|
+| `Impr Pant` | Captura completa → `~/Imágenes/` |
+| `Shift + Impr Pant` | Captura de área → `~/Imágenes/` |
+| `Shift_R` | Captura de área → `~/Imágenes/` |
+| `Super + Impr Pant` | Captura de área → portapapeles |
+
+### Multimedia y sistema
+| Atajo | Acción |
+|-------|--------|
+| `Subir volumen` | +5% volumen |
+| `Bajar volumen` | -5% volumen |
+| `Silenciar` | Mute/unmute |
+| `Play/Pausa` | Reproducir / pausar |
+| `Siguiente` | Canción siguiente |
+| `Anterior` | Canción anterior |
+| `Brillo +` | +5% brillo |
+| `Brillo -` | -5% brillo |
+
+### Ratón
+| Atajo | Acción |
+|-------|--------|
+| `Super + Clic izquierdo` | Mover ventana flotante |
+| `Super + Clic derecho` | Redimensionar ventana |
