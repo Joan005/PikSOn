@@ -1,4 +1,5 @@
 amd-ucode
+awww
 baobab
 base
 base-devel
@@ -57,6 +58,7 @@ hypridle
 hyprland
 hyprlock
 hyprpaper
+hyprswitch
 kitty
 libva-nvidia-driver
 linux
@@ -90,7 +92,6 @@ simple-scan
 slurp
 snapshot
 steam
-streamdeck-ui
 sudo
 sushi
 tecla

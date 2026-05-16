@@ -1,7 +1,7 @@
 brave-bin
+hyprswitch
+hyprswitch-debug
 pwvucontrol
-python-elgato-streamdeck
-streamdeck-ui
 ttf-unifraktur
 visual-studio-code-bin
 yay
