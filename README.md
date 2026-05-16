@@ -131,3 +131,70 @@ El script instala automáticamente:
 - El backup automático diario a GitHub
 
 **Reinicia al terminar y el sistema estará listo.**
+
+---
+
+## 4. Aplicaciones instaladas
+
+### Entorno de escritorio
+| App | Función |
+|-----|---------|
+| Hyprland | Compositor Wayland |
+| Waybar | Barra de estado |
+| nwg-dock-hyprland | Dock lateral |
+| Wofi | Lanzador de apps |
+| Mako | Notificaciones |
+| Kitty | Terminal |
+| Hyprpaper | Fondos de pantalla |
+| Hypridle | Suspensión automática |
+| Hyprlock | Pantalla de bloqueo |
+| Hyprswitch | Cambio de ventanas |
+
+### Navegadores
+| App | Función |
+|-----|---------|
+| Brave | Navegador principal (AUR) |
+| Firefox | Navegador secundario |
+| Epiphany | Navegador GNOME |
+
+### Multimedia
+| App | Función |
+|-----|---------|
+| Showtime | Reproductor de vídeo |
+| Decibels | Reproductor de audio |
+| GNOME Music | Biblioteca musical |
+| Loupe | Visor de imágenes |
+| Snapshot | Cámara |
+| Papers | Visor de PDFs |
+
+### Productividad y desarrollo
+| App | Función |
+|-----|---------|
+| Visual Studio Code | Editor de código (AUR) |
+| GitHub CLI | Git desde terminal |
+| Node.js + npm | Runtime JavaScript |
+| Python + pip | Runtime Python |
+
+### Comunicación y gaming
+| App | Función |
+|-----|---------|
+| Discord | Chat y voz |
+| Steam | Videojuegos |
+
+### Utilidades
+| App | Función |
+|-----|---------|
+| Grim + Slurp | Capturas de pantalla |
+| Pavucontrol / Pwvucontrol | Control de audio |
+| Piper | Configuración del ratón |
+| Playerctl | Control de medios |
+| Brightnessctl | Brillo de pantalla |
+| Baobab | Analizador de disco |
+| Nautilus | Gestor de archivos |
+| Wl-clipboard | Portapapeles Wayland |
+
+### Fuentes
+- JetBrains Mono Nerd (terminal)
+- Cormorant
+- Unifraktur
+- Noto Fonts
