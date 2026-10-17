@@ -8,8 +8,6 @@ brightnessctl
 decibels
 discord
 efibootmgr
-epiphany
-firefox
 gdm
 git
 github-cli
