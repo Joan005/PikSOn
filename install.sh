@@ -24,7 +24,6 @@ echo "==> Instalando paquetes AUR..."
 yay -S --needed --noconfirm \
     brave-bin \
     pwvucontrol \
-    streamdeck-ui \
     visual-studio-code-bin
 
 echo "==> Instalando Spotify (Flatpak)..."
