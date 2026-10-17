@@ -178,6 +178,7 @@ El script instala automáticamente:
 |-----|---------|
 | Discord | Chat y voz |
 | Steam | Videojuegos |
+| Spotify | Música (Flatpak) |
 
 ### Utilidades
 | App | Función |

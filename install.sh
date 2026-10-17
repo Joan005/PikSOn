@@ -27,6 +27,9 @@ yay -S --needed --noconfirm \
     streamdeck-ui \
     visual-studio-code-bin
 
+echo "==> Instalando Spotify (Flatpak)..."
+flatpak install -y flathub com.spotify.Client
+
 echo "==> Aplicando configuración..."
 cp -r ~/PikSOn/.config/* ~/.config/
 
