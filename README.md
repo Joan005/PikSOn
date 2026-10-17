@@ -154,8 +154,6 @@ El script instala automáticamente:
 | App | Función |
 |-----|---------|
 | Brave | Navegador principal (AUR) |
-| Firefox | Navegador secundario |
-| Epiphany | Navegador GNOME |
 
 ### Multimedia
 | App | Función |
