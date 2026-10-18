@@ -1,7 +1,7 @@
 brave-bin
 hyprswitch
-hyprswitch-debug
 pwvucontrol
+pwvucontrol-debug
 ttf-unifraktur
 visual-studio-code-bin
 yay

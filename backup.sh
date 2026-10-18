@@ -6,6 +6,10 @@ cp -r ~/.config/nwg-dock-hyprland .config/
 cp -r ~/.config/wofi .config/ 2>/dev/null
 cp -r ~/.config/mako .config/ 2>/dev/null
 cp -r ~/.config/kitty .config/ 2>/dev/null
+cp -r ~/.config/fontconfig .config/ 2>/dev/null
+cp -r ~/.config/gtk-3.0 .config/ 2>/dev/null
+cp -r ~/.config/gtk-4.0 .config/ 2>/dev/null
+cp ~/.config/xdg-desktop-portal-hyprland.conf .config/ 2>/dev/null
 pacman -Qqe > pkglist.txt
 pacman -Qqm > aur-pkglist.txt
 

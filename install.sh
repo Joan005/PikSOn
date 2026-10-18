@@ -18,7 +18,7 @@ if ! command -v yay &>/dev/null; then
 fi
 
 echo "==> Instalando paquetes oficiales..."
-sudo pacman -S --needed --noconfirm - < ~/PikSOn/pkglist.txt
+sudo pacman -S --needed --noconfirm - < ~/dotfiles/pkglist.txt
 
 echo "==> Instalando paquetes AUR..."
 yay -S --needed --noconfirm \
@@ -30,7 +30,7 @@ echo "==> Instalando Spotify (Flatpak)..."
 flatpak install -y flathub com.spotify.Client
 
 echo "==> Aplicando configuración..."
-cp -r ~/PikSOn/.config/* ~/.config/
+cp -r ~/dotfiles/.config/* ~/.config/
 
 echo "==> Configurando git..."
 git config --global user.name "pikson"
@@ -38,7 +38,7 @@ git config --global user.email "joancarmona05@gmail.com"
 
 echo "==> Activando backup automático diario..."
 mkdir -p ~/.config/systemd/user
-cp ~/PikSOn/.config/systemd/user/dotfiles-backup.* ~/.config/systemd/user/ 2>/dev/null || true
+cp ~/dotfiles/.config/systemd/user/dotfiles-backup.* ~/.config/systemd/user/ 2>/dev/null || true
 systemctl --user enable --now dotfiles-backup.timer 2>/dev/null || true
 
 echo ""

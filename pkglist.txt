@@ -8,7 +8,6 @@ brightnessctl
 decibels
 discord
 efibootmgr
-gdm
 git
 github-cli
 gnome-backgrounds
@@ -85,6 +84,7 @@ python-pip
 qt5-wayland
 qt6-wayland
 rygel
+sddm
 showtime
 simple-scan
 slurp
