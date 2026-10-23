@@ -7,6 +7,7 @@ Configuración completa del sistema. Sigue estos pasos en orden para tener el si
 -------------------------------
 (actu de 24/10 sobre test en VM)
 
+- archinstall
 - provar que hi ha conexio fent un ping a una web
 - istalar git per a clonar el repositori (sudo pacman -Sy git)
 - 
