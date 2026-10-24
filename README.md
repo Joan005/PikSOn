@@ -10,7 +10,9 @@ Configuración completa del sistema. Sigue estos pasos en orden para tener el si
 - archinstall
 - provar que hi ha conexio fent un ping a una web
 - istalar git per a clonar el repositori (sudo pacman -Sy git)
-- 
+- git clone https://github.com/Joan005/PikSOn
+cd PikSOn
+bash install.sh
 
 
 -------------------------------
