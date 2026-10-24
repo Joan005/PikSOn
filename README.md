@@ -7,12 +7,19 @@ Configuración completa del sistema. Sigue estos pasos en orden para tener el si
 -------------------------------
 (actu de 24/10 sobre test en VM)
 
+(proceso manual sin script)
+
 - archinstall
 - provar que hi ha conexio fent un ping a una web
-- istalar git per a clonar el repositori (sudo pacman -Sy git)
-- git clone https://github.com/Joan005/PikSOn
-cd PikSOn
-bash install.sh
+- istalar git (sudo pacman -Sy git)
+- sudo pacman -S --needed hyprland kitty wofi waybar xdg-desktop-portal-hyprland qt5-wayland qt6-wayland pipewire wireplumber ttf-jetbrains-mono-nerd
+- useradd -m -G wheel -s /bin/bash pikson
+- passwd pikson
+- exit
+- exit
+- (entras con el usuario pikson)
+- Hyprland
+- 
 
 
 -------------------------------
