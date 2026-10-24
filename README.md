@@ -15,10 +15,6 @@
   
 ---
 
-# 🎩 dotfiles
-
-Mi entorno de trabajo en **Arch Linux** con **Hyprland**, pensado para programar, estudiar y para el uso diario. Es portable: lo mismo sirve para una máquina virtual que para un PC de sobremesa o un portátil.
-
 <!-- Captura de pantalla: ![Escritorio](docs/escritorio.png) -->
 
 ## 📑 Índice
