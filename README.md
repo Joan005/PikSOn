@@ -2,8 +2,16 @@
 
 (proceso manual sin script)
 
-- archinstall
+
+```bash
+archinstall
+```
 - provar que hi ha conexio fent un ping a una web
+
+```bash
+ping
+```
+
 - istalar git (sudo pacman -Sy git)
 - sudo pacman -S --needed hyprland kitty wofi waybar xdg-desktop-portal-hyprland qt5-wayland qt6-wayland pipewire wireplumber ttf-jetbrains-mono-nerd
 - useradd -m -G wheel -s /bin/bash pikson
