@@ -12,7 +12,72 @@ archinstall
 ping
 ```
 
-- istalar git (sudo pacman -Sy git)
+https://wiki.hypr.land/Getting-Started/Installation/
+sudo pacman -S hyprland
+
+
+(una vez instalado hyprland si usas VM instala estos paquetes)
+
+sudo pacman -Rns qemu-guest-agent spice-vdagent
+sudo pacman -S --needed virtualbox-guest-utils
+sudo systemctl enable --now vboxservice
+
+Con la VM apagada, en Configuración → Pantalla:
+
+Controlador gráfico: VMSVGA
+Habilitar aceleración 3D marcada
+Memoria de vídeo: 128 MB (el máximo)
+----------------------
+
+start-hyprland
+
+
+(si no funcionara el kitty al entrar con super Q instalar foot y trabajar temporalemnte con el mientras se arregla kitty)
+
+sudo pacman -S --needed foot
+
+grep -n -i "kitty" $HOME/.config/hypr/hyprland.lua
+
+cp $HOME/.config/hypr/hyprland.lua $HOME/.config/hypr/hyprland.lua.bak
+
+sed -i 's/"kitty"/"foot"/' $HOME/.config/hypr/hyprland.lua
+
+(una vez dentro ejecuta foot y proba con)
+
+LIBGL_ALWAYS_SOFTWARE=1 kitty
+
+(en caso de que se abra kitty siginifica que ya funciona y procederas de la siguente forma para que vuelva a trabajar con kitty)
+
+cd $HOME/.config/hypr
+sed -i 's/"foot"/"env LIBGL_ALWAYS_SOFTWARE=1 kitty"/' hyprland.lua
+grep -n "local terminal" hyprland.lua
+
+Después, recargue saliendo con Super+M y ejecutando Hyprland de nuevo. Pruebe Super+Q.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+- istalar git
+```bash
+sudo pacman -Sy git
+```
 - sudo pacman -S --needed hyprland kitty wofi waybar xdg-desktop-portal-hyprland qt5-wayland qt6-wayland pipewire wireplumber ttf-jetbrains-mono-nerd
 - useradd -m -G wheel -s /bin/bash pikson
 - passwd pikson
