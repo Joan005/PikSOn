@@ -1,12 +1,5 @@
 # PikSOn - Arch Linux + Hyprland
 
-Configuración completa del sistema. Sigue estos pasos en orden para tener el sistema listo desde cero.
-
----
-
--------------------------------
-(actu de 24/10 sobre test en VM)
-
 (proceso manual sin script)
 
 - archinstall
@@ -19,274 +12,123 @@ Configuración completa del sistema. Sigue estos pasos en orden para tener el si
 - exit
 - (entras con el usuario pikson)
 - Hyprland
-- 
-
-
--------------------------------
-
-## 1. Instalar Arch Linux base
-
-### Arrancar desde USB
-Descarga la ISO de https://archlinux.org/download/ y grábala en un USB.
-Arranca desde el USB (F11/F12 en el arranque para elegir dispositivo).
-
-### Conectar a internet
-```bash
-# WiFi
-iwctl
-station wlan0 connect "NombreRed"
-exit
-
-# Comprobar conexión
-ping archlinux.org
-```
-
-### Particionar el disco
-```bash
-# Ver discos disponibles
-lsblk
-
-# Particionar (sustituye nvme0n1 por tu disco)
-fdisk /dev/nvme0n1
-```
-Dentro de fdisk:
-- `g` → crear tabla GPT
-- `n` → nueva partición EFI: `+1G`
-- `t` → tipo `1` (EFI System)
-- `n` → nueva partición swap: `+8G`
-- `t` → tipo `19` (Linux swap)
-- `n` → nueva partición raíz: resto del disco (Enter)
-- `w` → guardar y salir
-
-### Formatear y montar
-```bash
-mkfs.fat -F32 /dev/nvme0n1p1
-mkswap /dev/nvme0n1p2
-mkfs.ext4 /dev/nvme0n1p3
-
-mount /dev/nvme0n1p3 /mnt
-mount --mkdir /dev/nvme0n1p1 /mnt/boot
-swapon /dev/nvme0n1p2
-```
-
-### Instalar sistema base
-```bash
-pacstrap -K /mnt base linux linux-firmware networkmanager sudo git nano
-```
-
-### Configurar el sistema
-```bash
-genfstab -U /mnt >> /mnt/etc/fstab
-arch-chroot /mnt
-```
-
-Dentro del chroot:
-```bash
-# Zona horaria
-ln -sf /usr/share/zoneinfo/Europe/Madrid /etc/localtime
-hwclock --systohc
-
-# Idioma
-echo "es_ES.UTF-8 UTF-8" >> /etc/locale.gen
-locale-gen
-echo "LANG=es_ES.UTF-8" > /etc/locale.conf
-echo "KEYMAP=es" > /etc/vconsole.conf
-
-# Nombre del equipo
-echo "archlinux" > /etc/hostname
-
-# Contraseña root
-passwd
-# Introduce: root
-
-# Crear usuario
-useradd -m -G wheel -s /bin/bash pikson
-passwd pikson
-# Introduce: root
-
-# Sudo para el grupo wheel
-EDITOR=nano visudo
-# Descomenta la línea: %wheel ALL=(ALL:ALL) ALL
-
-# Bootloader
-pacman -S grub efibootmgr --noconfirm
-grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
-grub-mkconfig -o /boot/grub/grub.cfg
-
-# Activar red al arrancar
-systemctl enable NetworkManager
-
-exit
-umount -R /mnt
-reboot
-```
-
+  
 ---
 
-## 2. Primer arranque
+# 🎩 dotfiles
 
-Inicia sesión como `pikson` y conecta a internet:
-```bash
-# WiFi
-nmcli device wifi connect "NombreRed" password "contraseña"
+Mi entorno de trabajo en **Arch Linux** con **Hyprland**, pensado para programar, estudiar y para el uso diario. Es portable: lo mismo sirve para una máquina virtual que para un PC de sobremesa o un portátil.
 
-# O con interfaz gráfica (más adelante)
-nmtui
+<!-- Captura de pantalla: ![Escritorio](docs/escritorio.png) -->
+
+## 📑 Índice
+1. [Qué contiene](#-qué-contiene)
+2. [Estructura del repositorio](#-estructura-del-repositorio)
+3. [Instalación](#-instalación)
+4. [Atajos de teclado](#-atajos-de-teclado)
+5. [Personalización por hardware](#-personalización-por-hardware)
+6. [Solución de problemas](#-solución-de-problemas)
+7. [Créditos](#-créditos)
+
+## 🧩 Qué contiene
+
+| Componente | Programa | Por qué |
+|---|---|---|
+| Compositor / WM | Hyprland | Mosaico dinámico sobre Wayland, fluido y muy configurable |
+| Terminal | kitty | Acelerada por GPU, configuración en un solo fichero |
+| Shell | zsh | <!-- plugins, prompt (p. ej. starship) --> |
+| Barra | waybar | <!-- --> |
+| Lanzador | rofi / wofi | <!-- --> |
+| Editor | neovim | <!-- --> |
+| Notificaciones | mako / dunst | <!-- --> |
+| Fondo de pantalla | hyprpaper / swww | <!-- --> |
+| Gestor de ficheros | <!-- --> | <!-- --> |
+
+## 📁 Estructura del repositorio
+
+```
+dotfiles/
+├── README.md
+├── install.sh          # Instala paquetes y crea los enlaces simbólicos
+├── packages/
+│   ├── pacman.txt      # Paquetes de los repositorios oficiales
+│   └── aur.txt         # Paquetes del AUR
+├── config/             # Un directorio por programa (formato GNU Stow)
+│   ├── hypr/.config/hypr/
+│   ├── kitty/.config/kitty/
+│   ├── waybar/.config/waybar/
+│   ├── zsh/.zshrc
+│   └── nvim/.config/nvim/
+└── docs/               # Capturas y notas
 ```
 
----
+Cada carpeta de `config/` replica la ruta que tendría en `$HOME`. **GNU Stow** crea los enlaces simbólicos, de modo que los ficheros reales viven en el repositorio.
 
-## 3. Instalar todo con un comando
+## 🚀 Instalación
 
+### 1. Sistema base
+Instala Arch Linux (con `archinstall` o a mano) y crea un usuario con permisos de `sudo`.
+<!-- Indica aquí tu esquema de particiones, sistema de ficheros, bootloader... -->
+
+### 2. Clonar el repositorio
 ```bash
-git clone https://github.com/Joan005/PikSOn
-cd PikSOn
-bash install.sh
+sudo pacman -S --needed git stow
+git clone https://github.com/<usuario>/dotfiles.git ~/dotfiles
+cd ~/dotfiles
 ```
 
-El script instala automáticamente:
-- Hyprland y todo el entorno de escritorio
-- Todos los programas (Brave, Discord, Steam, VS Code, Spotify...)
-- La configuración completa (Waybar, Kitty, Wofi, Mako...)
-- El backup automático diario a GitHub
+### 3. Instalar paquetes
+```bash
+sudo pacman -S --needed - < packages/pacman.txt
 
-**Reinicia al terminar y el sistema estará listo.**
+# Ayudante del AUR (yay)
+git clone https://aur.archlinux.org/yay.git /tmp/yay
+(cd /tmp/yay && makepkg -si)
+yay -S --needed - < packages/aur.txt
+```
 
----
+### 4. Enlazar las configuraciones
+```bash
+cd ~/dotfiles/config
+stow -t ~ hypr kitty waybar zsh nvim
+```
+Si aparece un conflicto, es que ya existe un fichero real en esa ruta. Muévelo o respáldalo antes de repetir el comando.
 
-## 4. Aplicaciones instaladas
+### 5. Ajustes finales
+```bash
+chsh -s /usr/bin/zsh
+sudo systemctl enable --now NetworkManager
+```
+Cierra sesión e inicia Hyprland desde el TTY con `Hyprland`<!-- o mediante un display manager -->.
 
-### Entorno de escritorio
-| App | Función |
-|-----|---------|
-| Hyprland | Compositor Wayland |
-| Waybar | Barra de estado |
-| nwg-dock-hyprland | Dock lateral |
-| Wofi | Lanzador de apps |
-| Mako | Notificaciones |
-| Kitty | Terminal |
-| Hyprpaper | Fondos de pantalla |
-| Hypridle | Suspensión automática |
-| Hyprlock | Pantalla de bloqueo |
-| Hyprswitch | Cambio de ventanas |
+## ⌨️ Atajos de teclado
 
-### Navegadores
-| App | Función |
-|-----|---------|
-| Brave | Navegador principal (AUR) |
-
-### Multimedia
-| App | Función |
-|-----|---------|
-| Showtime | Reproductor de vídeo |
-| Decibels | Reproductor de audio |
-| GNOME Music | Biblioteca musical |
-| Loupe | Visor de imágenes |
-| Snapshot | Cámara |
-| Papers | Visor de PDFs |
-
-### Productividad y desarrollo
-| App | Función |
-|-----|---------|
-| Visual Studio Code | Editor de código (AUR) |
-| GitHub CLI | Git desde terminal |
-| Node.js + npm | Runtime JavaScript |
-| Python + pip | Runtime Python |
-
-### Comunicación y gaming
-| App | Función |
-|-----|---------|
-| Discord | Chat y voz |
-| Steam | Videojuegos |
-| Spotify | Música (Flatpak) |
-
-### Utilidades
-| App | Función |
-|-----|---------|
-| Grim + Slurp | Capturas de pantalla |
-| Pavucontrol / Pwvucontrol | Control de audio |
-| Piper | Configuración del ratón |
-| Playerctl | Control de medios |
-| Brightnessctl | Brillo de pantalla |
-| Baobab | Analizador de disco |
-| Nautilus | Gestor de archivos |
-| Wl-clipboard | Portapapeles Wayland |
-
-### Fuentes
-- JetBrains Mono Nerd (terminal)
-- Cormorant
-- Unifraktur
-- Noto Fonts
-
----
-
-## 5. Atajos de teclado
-
-> `Super` = tecla Windows
-
-### Abrir aplicaciones
 | Atajo | Acción |
-|-------|--------|
-| `Super + Enter` | Terminal (Kitty) |
-| `Super + C` | Claude (en terminal) |
-| `Super + B` | Brave |
-| `Super + W` | WhatsApp Web (Brave) |
-| `Super + D` | Discord |
-| `Super + V` | VS Code |
-| `Super + E` | Nautilus (archivos) |
-| `Super + S` | Spotify |
-| `Super + Shift + S` | Steam |
-| `Super + Space` | Lanzador de apps (Wofi) |
-| `Super + Q` | Transcripción por voz (Whisper) |
+|---|---|
+| `SUPER + Enter` | Abrir terminal (kitty) |
+| `SUPER + D` | Lanzador de aplicaciones |
+| `SUPER + Q` | Cerrar ventana |
+| `SUPER + 1…9` | Cambiar de espacio de trabajo |
+<!-- Completa con tus atajos reales -->
 
-### Gestión de ventanas
-| Atajo | Acción |
-|-------|--------|
-| `Super + Shift + Q` | Cerrar ventana activa |
-| `Super + Backspace` | Cerrar ventana activa |
-| `Super + F` | Pantalla completa |
-| `Super + Shift + F` | Flotante / fijo |
-| `Super + P` | Pseudotile |
-| `Super + J` | Cambiar split |
-| `Super + L` | Bloquear pantalla (Hyprlock) |
-| `Super + Shift + E` | Salir de Hyprland |
+## 🖥️ Personalización por hardware
 
-### Foco y movimiento
-| Atajo | Acción |
-|-------|--------|
-| `Super + ←↑↓→` | Mover foco entre ventanas |
-| `Super + Shift + ←↑↓→` | Mover ventana |
-| `Super + Ctrl + ←↑↓→` | Redimensionar ventana |
+Este entorno debe funcionar en distintos equipos. Lo específico de cada máquina se aísla así:
 
-### Workspaces
-| Atajo | Acción |
-|-------|--------|
-| `Super + 1-5` | Ir al workspace 1-5 |
-| `Super + Shift + 1-5` | Mover ventana al workspace 1-5 |
-| `Super + Rueda arriba/abajo` | Workspace siguiente/anterior |
+- **Monitores:** `config/hypr/.config/hypr/monitors.conf`, un fichero por equipo.
+- **GPU:** controladores NVIDIA, AMD o Intel según el equipo <!-- paquetes -->.
+- **Portátil:** batería, brillo y touchpad <!-- tlp / brightnessctl -->.
+- **VM:** puede requerir `WLR_NO_HARDWARE_CURSORS=1` y renderizado por software.
 
-### Capturas de pantalla
-| Atajo | Acción |
-|-------|--------|
-| `Impr Pant` | Captura completa → `~/Imágenes/` |
-| `Shift + Impr Pant` | Captura de área → `~/Imágenes/` |
-| `Shift_R` | Captura de área → `~/Imágenes/` |
-| `Super + Impr Pant` | Captura de área → portapapeles |
+## 🛠️ Solución de problemas
 
-### Multimedia y sistema
-| Atajo | Acción |
-|-------|--------|
-| `Subir volumen` | +5% volumen |
-| `Bajar volumen` | -5% volumen |
-| `Silenciar` | Mute/unmute |
-| `Play/Pausa` | Reproducir / pausar |
-| `Siguiente` | Canción siguiente |
-| `Anterior` | Canción anterior |
-| `Brillo +` | +5% brillo |
-| `Brillo -` | -5% brillo |
+- **Hyprland no arranca en la VM:** activa la aceleración 3D en la VM o usa `WLR_RENDERER_ALLOW_SOFTWARE=1`.
+- **Fuentes o iconos rotos:** instala una Nerd Font <!-- cuál --> y ejecuta `fc-cache -fv`.
+- <!-- Añade aquí los problemas que vayas encontrando -->
 
-### Ratón
-| Atajo | Acción |
-|-------|--------|
-| `Super + Clic izquierdo` | Mover ventana flotante |
-| `Super + Clic derecho` | Redimensionar ventana |
+## 🙏 Créditos
+
+<!-- Repositorios, temas y personas que te han inspirado -->
+
+## 📜 Licencia
+<!-- MIT, o la que prefieras -->
