@@ -295,3 +295,18 @@ PikSOn/
 > 💡 Las carpetas de `.config/` replican la ruta que tendrían en `~/.config`. A medida que se configuren más programas (kitty, waybar...), se añadirán aquí.
 
 
+
+
+
+instalar quickshell
+
+sudo pacman -S quickshell
+mkdir -p $HOME/.config/quickshell
+nano $HOME/.config/quickshell/shell.qml
+
+instalar tree
+
+sudo pacman -S --needed tree
+
+
+
