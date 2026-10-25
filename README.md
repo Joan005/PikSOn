@@ -11,6 +11,9 @@ Guía de instalación **manual (sin script)** de mi entorno de trabajo en Arch L
 6. [Editor de texto](#6--editor-de-texto)
 7. [Navegador Brave y atajo de teclado](#7--navegador-brave-y-atajo-de-teclado)
 8. [Atajos de teclado personalizados](#8--atajos-de-teclado-personalizados)
+9. [Programas instalados](#9--programas-instalados)
+10. [Git y GitHub](#10--git-y-github)
+11. [Restaurar el entorno en otro equipo](#11--restaurar-el-entorno-en-otro-equipo)
 
 ---
 
@@ -74,7 +77,7 @@ start-hyprland
 
 ## 5. 🔧 Terminal: solución si kitty no abre
 
-En VirtualBox, kitty puede cerrarse al instante al pulsar `Super + Q` por falta de OpenGL. Solución en tres pasos.
+En VirtualBox, kitty puede cerrarse al instante al pulsar `Super + Q` (atajo por defecto) por falta de OpenGL. Solución en tres pasos.
 
 ### 5.1 Usar foot temporalmente
 
@@ -90,7 +93,7 @@ cp $HOME/.config/hypr/hyprland.lua $HOME/.config/hypr/hyprland.lua.bak
 sed -i 's/"kitty"/"foot"/' $HOME/.config/hypr/hyprland.lua
 ```
 
-Sal con `Super + M`, vuelve a entrar y abre foot con `Super + Q`.
+Sal con `Super + M` (atajo por defecto), vuelve a entrar y abre foot con `Super + Q`.
 
 ### 5.2 Probar kitty con renderizado por software
 
@@ -159,176 +162,151 @@ Añadidos a `~/.config/hypr/hyprland.lua`:
 
 | Atajo | Acción | Línea |
 |---|---|---|
-| `Super + Q` | Abrir terminal | *(por defecto)* |
+| `Super + Enter` | Abrir terminal (kitty) | `hl.bind(mainMod .. " + RETURN", hl.dsp.exec_cmd(terminal))` |
 | `Super + B` | Abrir Brave | `hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("brave"))` |
+| `Super + D` | Abrir Discord | `hl.bind(mainMod .. " + D", hl.dsp.exec_cmd("discord"))` |
 | `Super + Retroceso` | Cerrar la ventana activa | `hl.bind(mainMod .. " + BACKSPACE", hl.dsp.window.close())` |
-hl.bind(mainMod .. " + D", hl.dsp.exec_cmd("discord"))
-> `Super + M` sale de Hyprland.
-hl.bind(mainMod .. " + RETURN", hl.dsp.exec_cmd(terminal))
-hl.bind(mainMod .. " + SHIFT + E", hl.dsp.exit())
+| `Super + Shift + E` | Salir de Hyprland | `hl.bind(mainMod .. " + SHIFT + E", hl.dsp.exit())` |
 
-PROGRAMAS INSTALADOS:
+> 💡 `Super + Q` queda libre (antes abría la terminal y `Super + M` salía de Hyprland, ambos sustituidos).
 
-discord:
+---
 
+## 9. 📦 Programas instalados
+
+### Discord
+
+```bash
 sudo pacman -S discord
-discord
+```
 
-------
+Se abre con `Super + D`, o desde una terminal sin dejarla ocupada:
 
-instalar github para acceder al repositorio
+```bash
+discord & disown
+```
 
+---
+
+## 10. 🐙 Git y GitHub
+
+Para acceder al repositorio (privado) desde la terminal.
+
+### 10.1 Instalar herramientas
+
+```bash
 sudo pacman -S --needed git github-cli
+```
 
+### 10.2 Configurar la identidad
+
+```bash
 git config --global user.name "Joan005"
-git config --global user.email "joancarmona05@gmail.com"
+git config --global user.email "tu_correo@ejemplo.com"
 git config --global init.defaultBranch main
+```
 
+### 10.3 Iniciar sesión en GitHub
+
+```bash
+gh auth login
+```
+
+Respuestas: `GitHub.com` → `HTTPS` → `Yes` → `Login with a web browser`.
+Copia el código de 8 caracteres que muestra la terminal e introdúcelo en <https://github.com/login/device>.
+
+> ⚠️ Si la terminal se queda esperando tras autorizar, cierra la ventana del navegador que abrió `gh`.
+
+Comprueba la sesión:
+
+```bash
+gh auth status
+```
+
+### 10.4 Clonar el repositorio
+
+```bash
 cd $HOME
 git clone https://github.com/Joan005/PikSOn
 cd PikSOn
-ls -R | head -50
-
-
-ejecutar comando para descargar los programas que tenga instalados:
-
-sudo pacman -S --needed - < pkglist.txt
-yay -S --needed - < aur-pkglist.txt
-
-
-
-
-
-
-
-
-
-
-
-- istalar git
-```bash
-sudo pacman -Sy git
 ```
-- sudo pacman -S --needed hyprland kitty wofi waybar xdg-desktop-portal-hyprland qt5-wayland qt6-wayland pipewire wireplumber ttf-jetbrains-mono-nerd
-- useradd -m -G wheel -s /bin/bash pikson
-- passwd pikson
-- exit
-- exit
-- (entras con el usuario pikson)
-- Hyprland
-  
+
+### 10.5 Subir cambios
+
+```bash
+git pull --rebase
+git add .
+git commit -m "descripción del cambio"
+git push
+```
+
+> 💡 Revisa siempre `git status` antes de hacer `git add .`.
+
 ---
 
-<!-- Captura de pantalla: ![Escritorio](docs/escritorio.png) -->
+## 11. 📥 Restaurar el entorno en otro equipo
 
-## 📑 Índice
-1. [Qué contiene](#-qué-contiene)
-2. [Estructura del repositorio](#-estructura-del-repositorio)
-3. [Instalación](#-instalación)
-4. [Atajos de teclado](#-atajos-de-teclado)
-5. [Personalización por hardware](#-personalización-por-hardware)
-6. [Solución de problemas](#-solución-de-problemas)
-7. [Créditos](#-créditos)
+Tras clonar el repositorio ([10.4](#104-clonar-el-repositorio)), instala todos los programas guardados:
 
-## 🧩 Qué contiene
-
-| Componente | Programa | Por qué |
-|---|---|---|
-| Compositor / WM | Hyprland | Mosaico dinámico sobre Wayland, fluido y muy configurable |
-| Terminal | kitty | Acelerada por GPU, configuración en un solo fichero |
-| Shell | zsh | <!-- plugins, prompt (p. ej. starship) --> |
-| Barra | waybar | <!-- --> |
-| Lanzador | rofi / wofi | <!-- --> |
-| Editor | neovim | <!-- --> |
-| Notificaciones | mako / dunst | <!-- --> |
-| Fondo de pantalla | hyprpaper / swww | <!-- --> |
-| Gestor de ficheros | <!-- --> | <!-- --> |
-
-## 📁 Estructura del repositorio
-
-```
-dotfiles/
-├── README.md
-├── install.sh          # Instala paquetes y crea los enlaces simbólicos
-├── packages/
-│   ├── pacman.txt      # Paquetes de los repositorios oficiales
-│   └── aur.txt         # Paquetes del AUR
-├── config/             # Un directorio por programa (formato GNU Stow)
-│   ├── hypr/.config/hypr/
-│   ├── kitty/.config/kitty/
-│   ├── waybar/.config/waybar/
-│   ├── zsh/.zshrc
-│   └── nvim/.config/nvim/
-└── docs/               # Capturas y notas
-```
-
-Cada carpeta de `config/` replica la ruta que tendría en `$HOME`. **GNU Stow** crea los enlaces simbólicos, de modo que los ficheros reales viven en el repositorio.
-
-## 🚀 Instalación
-
-### 1. Sistema base
-Instala Arch Linux (con `archinstall` o a mano) y crea un usuario con permisos de `sudo`.
-<!-- Indica aquí tu esquema de particiones, sistema de ficheros, bootloader... -->
-
-### 2. Clonar el repositorio
 ```bash
-sudo pacman -S --needed git stow
-git clone https://github.com/<usuario>/dotfiles.git ~/dotfiles
-cd ~/dotfiles
+sudo pacman -S --needed - < pkglist.txt
+yay -S --needed - < aur-pkglist.txt
 ```
 
-### 3. Instalar paquetes
+Después, aplica las configuraciones:
+
 ```bash
-sudo pacman -S --needed - < packages/pacman.txt
-
-# Ayudante del AUR (yay)
-git clone https://aur.archlinux.org/yay.git /tmp/yay
-(cd /tmp/yay && makepkg -si)
-yay -S --needed - < packages/aur.txt
+cp -r .config/hypr $HOME/.config/
 ```
 
-### 4. Enlazar las configuraciones
-```bash
-cd ~/dotfiles/config
-stow -t ~ hypr kitty waybar zsh nvim
-```
-Si aparece un conflicto, es que ya existe un fichero real en esa ruta. Muévelo o respáldalo antes de repetir el comando.
-
-### 5. Ajustes finales
-```bash
-chsh -s /usr/bin/zsh
-sudo systemctl enable --now NetworkManager
-```
-Cierra sesión e inicia Hyprland desde el TTY con `Hyprland`<!-- o mediante un display manager -->.
-
-## ⌨️ Atajos de teclado
-
-| Atajo | Acción |
+| Fichero | Contenido |
 |---|---|
-| `SUPER + Enter` | Abrir terminal (kitty) |
-| `SUPER + D` | Lanzador de aplicaciones |
-| `SUPER + Q` | Cerrar ventana |
-| `SUPER + 1…9` | Cambiar de espacio de trabajo |
-<!-- Completa con tus atajos reales -->
+| `pkglist.txt` | Paquetes de los repositorios oficiales |
+| `aur-pkglist.txt` | Paquetes del AUR |
+| `.config/` | Configuración de Hyprland y kitty |
 
-## 🖥️ Personalización por hardware
+> ⚠️ Requiere `yay` instalado ([apartado 7](#7--navegador-brave-y-atajo-de-teclado)). Las listas incluyen `virtualbox-guest-utils`, que solo hace falta en una VM: retíralo en hardware real.
 
-Este entorno debe funcionar en distintos equipos. Lo específico de cada máquina se aísla así:
+> 💡 Cada vez que instales algo nuevo, regenera las listas:
+> ```bash
+> pacman -Qqen > pkglist.txt
+> pacman -Qqem > aur-pkglist.txt
+> ```
 
-- **Monitores:** `config/hypr/.config/hypr/monitors.conf`, un fichero por equipo.
-- **GPU:** controladores NVIDIA, AMD o Intel según el equipo <!-- paquetes -->.
-- **Portátil:** batería, brillo y touchpad <!-- tlp / brightnessctl -->.
-- **VM:** puede requerir `WLR_NO_HARDWARE_CURSORS=1` y renderizado por software.
+## 12. 🗂️ Estructura del repositorio
 
-## 🛠️ Solución de problemas
+```
+PikSOn/
+├── README.md            # Este manual
+├── pkglist.txt          # Paquetes de los repositorios oficiales
+├── aur-pkglist.txt      # Paquetes del AUR
+└── .config/             # Configuraciones (se copian a ~/.config)
+    └── hypr/
+        └── hyprland.lua # Configuración de Hyprland: atajos, terminal...
+```
 
-- **Hyprland no arranca en la VM:** activa la aceleración 3D en la VM o usa `WLR_RENDERER_ALLOW_SOFTWARE=1`.
-- **Fuentes o iconos rotos:** instala una Nerd Font <!-- cuál --> y ejecuta `fc-cache -fv`.
-- <!-- Añade aquí los problemas que vayas encontrando -->
+| Elemento | Descripción |
+|---|---|
+| `README.md` | Manual de instalación y uso |
+| `pkglist.txt` | Lista de paquetes oficiales, generada con `pacman -Qqen` |
+| `aur-pkglist.txt` | Lista de paquetes del AUR, generada con `pacman -Qqem` |
+| `.config/hypr/` | Configuración de Hyprland, incluyendo los atajos de teclado |
 
-## 🙏 Créditos
+> 💡 Las carpetas de `.config/` replican la ruta que tendrían en `~/.config`. A medida que se configuren más programas (kitty, waybar...), se añadirán aquí.
 
-<!-- Repositorios, temas y personas que te han inspirado -->
 
-## 📜 Licencia
-<!-- MIT, o la que prefieras -->
+
+
+
+instalar quickshell
+
+sudo pacman -S quickshell
+mkdir -p $HOME/.config/quickshell
+nano $HOME/.config/quickshell/shell.qml
+
+instalar tree
+
+sudo pacman -S --needed tree
+
+
+
