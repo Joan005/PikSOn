@@ -174,16 +174,20 @@ discord:
 sudo pacman -S discord
 discord
 
+------
 
+instalar github para acceder al repositorio
 
+sudo pacman -S --needed git github-cli
 
+git config --global user.name "Joan005"
+git config --global user.email "joancarmona05@gmail.com"
+git config --global init.defaultBranch main
 
-
-
-
-
-
-
+cd $HOME
+git clone https://github.com/Joan005/PikSOn
+cd PikSOn
+ls -R | head -50
 
 
 
