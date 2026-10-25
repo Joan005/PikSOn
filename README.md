@@ -54,15 +54,29 @@ grep -n "local terminal" hyprland.lua
 
 Después, recargue saliendo con Super+M y ejecutando Hyprland de nuevo. Pruebe Super+Q.
 
+------------------------------
 
+(instala el gestor de archivos nano)
 
+sudo pacman -S --needed nano
 
+instalacion de brave como navegador junto con aplicar atajo de teclado para acceder a el:
 
+sudo pacman -S --needed base-devel git
+cd /tmp
+git clone https://aur.archlinux.org/yay-bin.git
+cd yay-bin
+makepkg -si
+yay -S brave-bin
 
+nano $HOME/.config/hypr/hyprland.lua
 
+hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("brave"))
 
+----
 
-
+(para cerrar pestañas con super + delete)
+hl.bind(mainMod .. " + BACKSPACE", hl.dsp.window.close())
 
 
 
