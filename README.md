@@ -137,7 +137,18 @@ sudo pacman -S --needed nano
 
 Uso básico: `Ctrl+O` guarda, `Ctrl+X` sale y `Ctrl+W` busca.
 
-> 💡 Para crear ficheros largos sin errores de pegado, es más fiable escribirlos desde la terminal con `cat > fichero <<'EOF'` ... `EOF`. Cuidado: `EOF` es la señal de fin del comando, **no** forma parte del fichero, y no debe pegarse dentro de nano.
+### Reemplazar un fichero entero en nano
+
+| Paso | Atajo |
+|---|---|
+| Ir al principio del fichero | `Alt + \` |
+| Cortar desde el cursor hasta el final (lo deja vacío) | `Alt + T` |
+| Pegar el contenido nuevo | `Ctrl + Shift + V` (o clic derecho / `Shift + Insert`) |
+| Guardar y salir | `Ctrl + O`, `Enter`, `Ctrl + X` |
+
+> ⚠️ Pega **solo el contenido del fichero**. Las líneas `cat > fichero <<'EOF'` y `EOF` son parte de otro método (escribir desde la terminal) y **no deben pegarse dentro de nano**: `EOF` quedaría escrito en el fichero y lo rompería.
+
+> 💡 Para ficheros largos, también es fiable escribirlos desde la terminal con `cat > fichero <<'EOF'` ... `EOF`, que evita las erratas de teclear a mano.
 
 ---
 
@@ -202,7 +213,7 @@ La configuración vive en `~/.config/quickshell/` y se divide en piezas:
 | Fichero | Función |
 |---|---|
 | `shell.qml` | Punto de entrada: carga las demás piezas |
-| `Bar.qml` | Barra superior: workspaces de Hyprland y reloj |
+| `Bar.qml` | Barra superior: contenedor fijo de workspaces de Hyprland y reloj |
 | `Dock.qml` | Panel lateral derecho con botones de aplicaciones (Brave, Discord) |
 
 `shell.qml`:
@@ -226,6 +237,8 @@ qs
 Quickshell **recarga solo** al guardar un fichero. Si hay un error, aparece una ventana con la línea y el motivo.
 
 > 💡 Los recuadros numerados de la izquierda de la barra son los **workspaces** (escritorios virtuales) de Hyprland. Solo aparecen los que existen: se crean al usarlos (por ejemplo, `Super + 2`, según la configuración por defecto), y un clic sobre el número cambia de escritorio.
+
+> 💡 Los workspaces van dentro de un **contenedor oscuro de anchura fija** (297 px), calculada para 10 recuadros: `10 × 24 px + 9 × 5 px de separación + 12 px de margen interior`. Así el espacio queda reservado aunque solo exista un workspace, y las piezas que se añadan a su derecha no se desplazan. Para anclar otra pieza junto a él, se usa `anchors.left: wsBox.right`.
 
 > 💡 `Dock.qml` usa `margins { top: 0 }`: Quickshell ya reserva el espacio de la barra superior, y un margen manual lo duplicaría, dejando un hueco entre ambos paneles.
 
@@ -261,8 +274,9 @@ Si al editar un `.qml` aparece la ventana **"Config reload failed"**:
 - Indica fichero, línea y columna del error (por ejemplo, `@Bar.qml[44:2]`).
 - `Type Bar unavailable` en `shell.qml` es solo la **consecuencia**: la causa real está en la línea del fichero que se cita debajo.
 - Los fallos habituales son una errata de una letra (`QuickQuick`, `mondelData`, `execDetacged`) o una llave `{ }` sin cerrar.
+- Si el mismo error se repite tras editar, probablemente **el fichero no ha cambiado**: comprueba su contenido con `head -3` o `cat -n fichero | sed -n '30,52p'`.
 
-> 💡 Para ficheros largos, es más fiable reescribirlos con `cat > fichero <<'EOF'` que editarlos a mano en nano.
+> 💡 Para ficheros largos, lo más seguro es reemplazarlos enteros ([apartado 6](#6--editor-de-texto)) en lugar de retocar llaves a mano.
 
 ---
 
@@ -340,9 +354,27 @@ git push
 
 > 💡 Revisa siempre `git status` antes de hacer `git add .`.
 
-> ⚠️ Si has editado el README desde la web, haz `git pull` antes de `git push`; de lo contrario, GitHub rechazará la subida con `rejected (fetch first)`.
-
 > ⚠️ **No copies nunca `~/.config` completo** al repositorio: contiene el token de GitHub (`gh`), datos del navegador y sesiones. Copia solo las carpetas que configures a propósito.
+
+### 11.6 Cómo se sincronizan las copias
+
+Hay **dos copias** del repositorio: la **remota** (GitHub) y la **local** (`~/PikSOn`). Git **no las sincroniza solo**:
+
+| Acción | Efecto |
+|---|---|
+| Editar en la web | Solo cambia la copia remota; la local no se entera hasta hacer `git pull` |
+| Editar en local | Solo cambia la copia local; GitHub no se entera hasta hacer `git push` |
+
+Por eso, si has editado algo desde la web (por ejemplo, el README), `git push` es rechazado con `rejected (fetch first)`. La solución es traer lo remoto primero:
+
+```bash
+git pull --no-rebase --no-edit
+git push
+```
+
+> 💡 `git status` solo refleja lo último que git descargó, no el estado actual de GitHub. Para consultar si hay novedades sin mezclar nada: `git fetch` y después `git status` (indicará `behind` si hay cambios remotos).
+
+> 💡 Un `commit` sin `git add .` previo no incluye los cambios: los ficheros modificados aparecen en rojo en `git status` hasta que se añaden.
 
 ---
 
@@ -437,7 +469,10 @@ PikSOn/
 
 - [x] Ajustar el hueco entre la barra superior y el panel lateral
 - [x] Workspaces en la barra
+- [x] Contenedor fijo para 10 workspaces
+- [ ] Quitar el registro de depuración de la línea de arranque de Quickshell
 - [ ] Volumen en la barra
+- [ ] Más piezas en la barra, a la derecha del contenedor de workspaces
 - [ ] Iconos reales en el panel lateral
 - [ ] Lanzador de aplicaciones
 - [ ] Fondo de pantalla
