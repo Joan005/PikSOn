@@ -1,82 +1,169 @@
-# PikSOn - Arch Linux + Hyprland
+# 🎩 PikSOn — Arch Linux + Hyprland
 
-(proceso manual sin script)
+Guía de instalación **manual (sin script)** de mi entorno de trabajo en Arch Linux con Hyprland.
 
+## 📑 Índice
+1. [Instalar Arch Linux](#1--instalar-arch-linux)
+2. [Instalar Hyprland](#2--instalar-hyprland)
+3. [Ajustes para máquina virtual (VirtualBox)](#3--ajustes-para-máquina-virtual-virtualbox)
+4. [Primer arranque](#4--primer-arranque)
+5. [Terminal: solución si kitty no abre](#5--terminal-solución-si-kitty-no-abre)
+6. [Editor de texto](#6--editor-de-texto)
+7. [Navegador Brave y atajo de teclado](#7--navegador-brave-y-atajo-de-teclado)
+8. [Atajos de teclado personalizados](#8--atajos-de-teclado-personalizados)
+
+---
+
+## 1. 💿 Instalar Arch Linux
 
 ```bash
 archinstall
 ```
-- provar que hi ha conexio fent un ping a una web
+
+Una vez instalado, comprueba que hay conexión a internet:
 
 ```bash
-ping
+ping archlinux.org
 ```
 
-https://wiki.hypr.land/Getting-Started/Installation/
+---
+
+## 2. 🪟 Instalar Hyprland
+
+Documentación oficial: <https://wiki.hypr.land/Getting-Started/Installation/>
+
+```bash
 sudo pacman -S hyprland
+```
 
+---
 
-(una vez instalado hyprland si usas VM instala estos paquetes)
+## 3. 🖥️ Ajustes para máquina virtual (VirtualBox)
 
-sudo pacman -Rns qemu-guest-agent spice-vdagent
+> ⚠️ Solo si trabajas desde una VM. Hazlo **después** de instalar Hyprland.
+
+**Paquetes** (si habías instalado antes las herramientas de QEMU, retíralas):
+
+```bash
+sudo pacman -Rns qemu-guest-agent spice-vdagent   # solo si estaban instalados
 sudo pacman -S --needed virtualbox-guest-utils
 sudo systemctl enable --now vboxservice
+```
 
-Con la VM apagada, en Configuración → Pantalla:
+**Configuración de la VM** (con la máquina **apagada**), en *Configuración → Pantalla*:
 
-Controlador gráfico: VMSVGA
-Habilitar aceleración 3D marcada
-Memoria de vídeo: 128 MB (el máximo)
-----------------------
+| Opción | Valor |
+|---|---|
+| Controlador gráfico | **VMSVGA** |
+| Aceleración 3D | **Habilitada** |
+| Memoria de vídeo | **128 MB** (el máximo) |
 
+---
+
+## 4. 🚀 Primer arranque
+
+Desde el TTY:
+
+```bash
 start-hyprland
+```
 
+> Según la versión también puede lanzarse con `Hyprland`.
 
-(si no funcionara el kitty al entrar con super Q instalar foot y trabajar temporalemnte con el mientras se arregla kitty)
+---
 
+## 5. 🔧 Terminal: solución si kitty no abre
+
+En VirtualBox, kitty puede cerrarse al instante al pulsar `Super + Q` por falta de OpenGL. Solución en tres pasos.
+
+### 5.1 Usar foot temporalmente
+
+```bash
 sudo pacman -S --needed foot
+```
 
+Localiza la línea del terminal, haz una copia de seguridad y sustitúyelo:
+
+```bash
 grep -n -i "kitty" $HOME/.config/hypr/hyprland.lua
-
 cp $HOME/.config/hypr/hyprland.lua $HOME/.config/hypr/hyprland.lua.bak
-
 sed -i 's/"kitty"/"foot"/' $HOME/.config/hypr/hyprland.lua
+```
 
-(una vez dentro ejecuta foot y proba con)
+Sal con `Super + M`, vuelve a entrar y abre foot con `Super + Q`.
 
+### 5.2 Probar kitty con renderizado por software
+
+Desde foot:
+
+```bash
 LIBGL_ALWAYS_SOFTWARE=1 kitty
+```
 
-(en caso de que se abra kitty siginifica que ya funciona y procederas de la siguente forma para que vuelva a trabajar con kitty)
+Si kitty se abre, funciona con esa variable.
 
+### 5.3 Dejar kitty como terminal definitivo
+
+```bash
 cd $HOME/.config/hypr
 sed -i 's/"foot"/"env LIBGL_ALWAYS_SOFTWARE=1 kitty"/' hyprland.lua
 grep -n "local terminal" hyprland.lua
+```
 
-Después, recargue saliendo con Super+M y ejecutando Hyprland de nuevo. Pruebe Super+Q.
+Recarga saliendo con `Super + M` y ejecutando de nuevo `Hyprland`. Prueba `Super + Q`.
 
-------------------------------
+> ⚠️ `LIBGL_ALWAYS_SOFTWARE=1` solo es necesario en la VM. **No lo uses en hardware real.**
 
-(instala el gestor de archivos nano)
+---
 
+## 6. ✏️ Editor de texto
+
+Instalamos **nano**, un editor de texto sencillo para terminal:
+
+```bash
 sudo pacman -S --needed nano
+```
 
-instalacion de brave como navegador junto con aplicar atajo de teclado para acceder a el:
+Uso básico: `Ctrl+O` guarda, `Ctrl+X` sale y `Ctrl+W` busca.
 
+---
+
+## 7. 🌐 Navegador Brave y atajo de teclado
+
+Brave está en el **AUR**, por lo que primero hace falta instalar `yay`:
+
+```bash
 sudo pacman -S --needed base-devel git
 cd /tmp
 git clone https://aur.archlinux.org/yay-bin.git
 cd yay-bin
 makepkg -si
 yay -S brave-bin
+```
 
+Después, abre el fichero de configuración y añade el atajo `Super + B`:
+
+```bash
 nano $HOME/.config/hypr/hyprland.lua
+```
 
+```lua
 hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("brave"))
+```
 
-----
+---
 
-(para cerrar pestañas con super + delete)
-hl.bind(mainMod .. " + BACKSPACE", hl.dsp.window.close())
+## 8. ⌨️ Atajos de teclado personalizados
+
+Añadidos a `~/.config/hypr/hyprland.lua`:
+
+| Atajo | Acción | Línea |
+|---|---|---|
+| `Super + Q` | Abrir terminal | *(por defecto)* |
+| `Super + B` | Abrir Brave | `hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("brave"))` |
+| `Super + Retroceso` | Cerrar la ventana activa | `hl.bind(mainMod .. " + BACKSPACE", hl.dsp.window.close())` |
+
+> `Super + M` sale de Hyprland.
 
 
 
