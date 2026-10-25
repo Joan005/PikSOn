@@ -7,12 +7,15 @@ github-cli
 grub
 hyprland
 kitty
+less
 linux
 linux-firmware
 mkinitcpio
 nano
 polkit
+quickshell
 sudo
+tree
 ttf-jetbrains-mono-nerd
 virtualbox-guest-utils
 vulkan-virtio

@@ -55,7 +55,10 @@ local menu        = "hyprlauncher"
 --   hl.exec_cmd("nm-applet")
 --   hl.exec_cmd("waybar & hyprpaper & firefox")
 -- end)
-
+-- Quickshell: barra superior y panel lateral
+hl.on("hyprland.start",function ()
+	hl.exec_cmd("env LIBGL_ALWAYS_SOFTWARE=1 qs > $HOME/qs-arranche.log 2>&1")
+end)
 
 -------------------------------
 ---- ENVIRONMENT VARIABLES ----
