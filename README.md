@@ -225,6 +225,10 @@ qs
 
 Quickshell **recarga solo** al guardar un fichero. Si hay un error, aparece una ventana con la línea y el motivo.
 
+> 💡 Los recuadros numerados de la izquierda de la barra son los **workspaces** (escritorios virtuales) de Hyprland. Solo aparecen los que existen: se crean al usarlos (por ejemplo, `Super + 2`, según la configuración por defecto), y un clic sobre el número cambia de escritorio.
+
+> 💡 `Dock.qml` usa `margins { top: 0 }`: Quickshell ya reserva el espacio de la barra superior, y un margen manual lo duplicaría, dejando un hueco entre ambos paneles.
+
 ### 9.3 Arranque automático
 
 Bloque incluido en `hyprland.lua`, dentro de la sección de autoarranque:
@@ -249,6 +253,16 @@ En `Dock.qml`, añade una línea a la lista `model` (todas terminan en coma meno
 ```
 
 El programa debe estar instalado.
+
+### 9.5 Solución de problemas
+
+Si al editar un `.qml` aparece la ventana **"Config reload failed"**:
+
+- Indica fichero, línea y columna del error (por ejemplo, `@Bar.qml[44:2]`).
+- `Type Bar unavailable` en `shell.qml` es solo la **consecuencia**: la causa real está en la línea del fichero que se cita debajo.
+- Los fallos habituales son una errata de una letra (`QuickQuick`, `mondelData`, `execDetacged`) o una llave `{ }` sin cerrar.
+
+> 💡 Para ficheros largos, es más fiable reescribirlos con `cat > fichero <<'EOF'` que editarlos a mano en nano.
 
 ---
 
@@ -325,6 +339,8 @@ git push
 ```
 
 > 💡 Revisa siempre `git status` antes de hacer `git add .`.
+
+> ⚠️ Si has editado el README desde la web, haz `git pull` antes de `git push`; de lo contrario, GitHub rechazará la subida con `rejected (fetch first)`.
 
 > ⚠️ **No copies nunca `~/.config` completo** al repositorio: contiene el token de GitHub (`gh`), datos del navegador y sesiones. Copia solo las carpetas que configures a propósito.
 
@@ -419,8 +435,8 @@ PikSOn/
 
 ## 15. 📝 Pendiente
 
-- [ ] Ajustar el hueco entre la barra superior y el panel lateral
-- [ ] Workspaces en la barra al arrancar
+- [x] Ajustar el hueco entre la barra superior y el panel lateral
+- [x] Workspaces en la barra
 - [ ] Volumen en la barra
 - [ ] Iconos reales en el panel lateral
 - [ ] Lanzador de aplicaciones
