@@ -162,8 +162,32 @@ Añadidos a `~/.config/hypr/hyprland.lua`:
 | `Super + Q` | Abrir terminal | *(por defecto)* |
 | `Super + B` | Abrir Brave | `hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("brave"))` |
 | `Super + Retroceso` | Cerrar la ventana activa | `hl.bind(mainMod .. " + BACKSPACE", hl.dsp.window.close())` |
-
+hl.bind(mainMod .. " + D", hl.dsp.exec_cmd("discord"))
 > `Super + M` sale de Hyprland.
+hl.bind(mainMod .. " + RETURN", hl.dsp.exec_cmd(terminal))
+hl.bind(mainMod .. " + SHIFT + E", hl.dsp.exit())
+
+PROGRAMAS INSTALADOS:
+
+discord:
+
+sudo pacman -S discord
+discord
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
