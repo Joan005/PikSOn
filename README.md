@@ -190,8 +190,10 @@ cd PikSOn
 ls -R | head -50
 
 
+ejecutar comando para descargar los programas que tenga instalados:
 
-
+sudo pacman -S --needed - < pkglist.txt
+yay -S --needed - < aur-pkglist.txt
 
 
 
