@@ -8,9 +8,9 @@ PanelWindow {
 		right: true
 	}
 	margins {
-		top: 30
+		top: 0
 	}
-	implicitWidth: 60
+	implicitWidth: 30
 	color: "#1e1e2e"
 
 	Column {
@@ -25,8 +25,8 @@ PanelWindow {
 	]
 
 			Rectangle {
-				width: 40
-				height: 40
+				width: 20
+				height: 20
 				radius: 10
 				color : area.containsMouse ? "#89b4fa" : "#313244"
 			
@@ -34,7 +34,7 @@ PanelWindow {
 				anchors.centerIn: parent
 				text: modelData.label
 				color: area.containsMouse ? "#1e1e2e" : "#cdd6f4"
-				font.pixelSize: 15
+				font.pixelSize: 10
 				font.bold : true
 			}
 		

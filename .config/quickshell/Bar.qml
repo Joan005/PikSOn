@@ -1,5 +1,6 @@
 import Quickshell
 import QtQuick
+import Quickshell.Hyprland
 
 PanelWindow {
 	anchors {
@@ -7,13 +8,44 @@ PanelWindow {
 		left: true
 		right: true
 	}
-	implicitHeight: 30
+	implicitHeight: 25
 	color: "#1e1e2e"
 	
 	SystemClock {
 		id: clock
 		precision: SystemClock.Seconds
 	}
+	
+	Row {
+		anchors.left:parent.left
+		anchors.leftMargin:8
+		anchors.verticalCenter: parent.verticalCenter
+		spacing: 5
+		
+
+		Repeater {
+			model : Hyprland.workspaces
+
+			Rectangle {
+				width: 24
+				height: 19
+				radius: 5
+				color: modelData.focused ? "#89b4fa" : "#313244"	
+				
+
+			Text {
+				anchors.centerIn: parent
+				text: modelData.id
+				color: modelData.focused ? "#1e1e2e" : "#cdd6f4"
+			}
+
+			MouseArea {
+				anchors.fill: parent
+				onClicked: modelData.activate()
+			}
+		}
+	}
+}	
 
 	Text {
 		anchors.centerIn: parent
