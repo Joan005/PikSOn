@@ -35,6 +35,33 @@ ping archlinux.org
 
 > ⌨️ La distribución del teclado se mantiene en **inglés (US)**: es una decisión deliberada.
 
+### 1.1 Red: NetworkManager
+
+`archinstall` puede dejar la red gestionada por `systemd-networkd`. Se usa **NetworkManager** porque es el estándar en portátiles (Wi-Fi) y ofrece `nmcli`, que sirve igual para cable y Wi-Fi: la misma instalación vale para una VM, una torre con Ethernet y un portátil.
+
+> ⚠️ Haz antes una **instantánea de la VM**: al cambiar de gestor, la interfaz pierde su IP hasta reiniciar o reconectarla.
+
+```bash
+sudo pacman -S --needed networkmanager
+sudo systemctl disable --now systemd-networkd.service systemd-networkd.socket
+sudo systemctl enable --now NetworkManager
+sudo reboot
+```
+
+Tras reiniciar, comprueba que solo hay un gestor activo y que hay red:
+
+```bash
+systemctl is-active NetworkManager systemd-networkd   # active / inactive
+nmcli device status
+ping -c 3 archlinux.org
+```
+
+> 💡 Al deshabilitar `systemd-networkd` aparece un aviso sobre sus *sockets* (`triggering units are still active`): es normal, ya no arrancarán y el reinicio los limpia. Si tras el reinicio `systemd-networkd` siguiera `active`, enmascáralo con `sudo systemctl mask systemd-networkd.service systemd-networkd.socket`.
+
+> 💡 Si la conexión no vuelve sin reiniciar: `sudo nmcli device disconnect enp0s3` y `sudo nmcli device connect enp0s3` (sustituye `enp0s3` por tu interfaz).
+
+> 💡 Los nombres de interfaz cambian de un equipo a otro (`enp0s3` en la VM, `enp3s0` en una torre, `wlan0` o `wlp2s0` en un portátil). Por eso nada de este repositorio escribe un nombre fijo: se detecta por **tipo** (`ethernet` o `wifi`).
+
 ---
 
 ## 2. 🪟 Instalar Hyprland
@@ -69,6 +96,8 @@ sudo systemctl enable --now vboxservice
 
 > 💡 Los programas que dibujan con OpenGL (kitty, Quickshell) fallan en VirtualBox con errores como `invalid arguments for wl_surface#attach` o `Could not create EGL surface`. La solución es la variable `LIBGL_ALWAYS_SOFTWARE=1` (apartados [5](#5--terminal-solución-si-kitty-no-abre) y [9](#9--quickshell-barra-y-panel-lateral)). **No debe usarse en hardware real.**
 
+> 💡 En la VM solo se puede probar la conexión **por cable** (adaptador virtual). El Wi-Fi y el Bluetooth requieren hardware real.
+
 ---
 
 ## 4. 🚀 Primer arranque
@@ -79,7 +108,7 @@ Desde el TTY:
 start-hyprland
 ```
 
-> Según la versión también puede lanzarse con `Hyprland`.
+> ⚠️ Entra **siempre con `start-hyprland`**, también al volver a entrar tras salir de la sesión. Arrancar `Hyprland` directamente funciona, pero muestra el aviso *"Hyprland was started without start-hyprland. This is strongly discouraged unless you are in a debugging environment"*: el lanzador prepara el entorno de la sesión y vigila el proceso.
 
 ---
 
@@ -101,7 +130,7 @@ cp $HOME/.config/hypr/hyprland.lua $HOME/.config/hypr/hyprland.lua.bak
 sed -i 's/"kitty"/"foot"/' $HOME/.config/hypr/hyprland.lua
 ```
 
-Sal con `Super + M` (atajo por defecto), vuelve a entrar y abre foot con `Super + Q`.
+Sal con `Super + M` (atajo por defecto), vuelve a entrar con `start-hyprland` y abre foot con `Super + Q`.
 
 ### 5.2 Probar kitty con renderizado por software
 
@@ -121,7 +150,7 @@ sed -i 's/"foot"/"env LIBGL_ALWAYS_SOFTWARE=1 kitty"/' hyprland.lua
 grep -n "local terminal" hyprland.lua
 ```
 
-Recarga saliendo con `Super + M` y ejecutando de nuevo `Hyprland`. Prueba `Super + Q`.
+Recarga saliendo con `Super + M` y ejecutando de nuevo `start-hyprland`. Prueba `Super + Q`.
 
 > ⚠️ `LIBGL_ALWAYS_SOFTWARE=1` solo es necesario en la VM. **No lo uses en hardware real.**
 
@@ -213,8 +242,9 @@ La configuración vive en `~/.config/quickshell/` y se divide en piezas:
 | Fichero | Función |
 |---|---|
 | `shell.qml` | Punto de entrada: carga las demás piezas |
-| `Bar.qml` | Barra superior: contenedor fijo de workspaces de Hyprland y reloj |
+| `Bar.qml` | Barra superior: contenedor fijo de workspaces, reloj y chip de red |
 | `Dock.qml` | Panel lateral derecho con botones de aplicaciones (Brave, Discord) |
+| `scripts/net.sh` | Script que consulta NetworkManager y alimenta el chip de red |
 
 `shell.qml`:
 
@@ -231,6 +261,7 @@ Para restaurarla desde este repositorio:
 
 ```bash
 cp -r .config/quickshell $HOME/.config/
+chmod +x $HOME/.config/quickshell/scripts/net.sh
 qs
 ```
 
@@ -277,6 +308,67 @@ Si al editar un `.qml` aparece la ventana **"Config reload failed"**:
 - Si el mismo error se repite tras editar, probablemente **el fichero no ha cambiado**: comprueba su contenido con `head -3` o `cat -n fichero | sed -n '30,52p'`.
 
 > 💡 Para ficheros largos, lo más seguro es reemplazarlos enteros ([apartado 6](#6--editor-de-texto)) en lugar de retocar llaves a mano.
+
+### 9.6 Chip de red en la barra
+
+A la derecha de la barra se muestra el estado de la red, por ejemplo **`Cable · 10.0.2.15`** (o `Wi-Fi · ...`, o `Sin red`). Los datos los obtiene un script que consulta **NetworkManager** ([apartado 1.1](#11-red-networkmanager)) y que `Bar.qml` ejecuta cada 5 segundos.
+
+`~/.config/quickshell/scripts/net.sh`:
+
+```sh
+#!/bin/sh
+# Imprime: tipo|dispositivo|ip   (o "none" si no hay conexión)
+dev=$(nmcli -t -f DEVICE,TYPE,STATE device | awk -F: '$3=="connected" && ($2=="ethernet" || $2=="wifi") {print $1; exit}')
+if [ -z "$dev" ]; then
+    echo "none"
+    exit 0
+fi
+tipo=$(nmcli -g GENERAL.TYPE device show "$dev")
+ip=$(nmcli -g IP4.ADDRESS device show "$dev" | cut -d'|' -f1)
+echo "$tipo|$dev|$ip"
+```
+
+Pruébalo a mano; debe imprimir algo como `ethernet|enp0s3|10.0.2.15/24`:
+
+```bash
+sh $HOME/.config/quickshell/scripts/net.sh
+```
+
+> ⚠️ **El script debe ser ejecutable**, porque Quickshell lo lanza directamente. Un fichero creado con nano no lo es, y el chip mostraría **"Sin red"** aunque haya conexión:
+> ```bash
+> chmod +x $HOME/.config/quickshell/scripts/net.sh
+> ls -la $HOME/.config/quickshell/scripts/    # debe verse -rwxr-xr-x
+> ```
+> Git conserva este permiso al subir y clonar el repositorio.
+
+> 💡 El script no usa ningún nombre de interfaz: elige la primera conexión activa de tipo `ethernet` o `wifi`, así que sirve igual en la VM, en una torre y en un portátil.
+
+> 💡 Para probar que reacciona: `sudo nmcli device disconnect enp0s3` (en unos 5 s pasa a "Sin red") y `sudo nmcli device connect enp0s3` para volver.
+
+En `Bar.qml`, la pieza se compone de tres partes: un `Process` que ejecuta el script, un `Timer` que lo repite y un `Rectangle` con el texto:
+
+```qml
+Process {
+    id: netProc
+    command: ["sh", "-c", "$HOME/.config/quickshell/scripts/net.sh"]
+    running: true
+    stdout: StdioCollector {
+        onStreamFinished: {
+            var p = this.text.trim().split("|")
+            // ... actualiza netType, netDev y netIp
+        }
+    }
+}
+
+Timer {
+    interval: 5000
+    running: true
+    repeat: true
+    onTriggered: netProc.running = true
+}
+```
+
+El fichero completo está en `.config/quickshell/Bar.qml`.
 
 ---
 
@@ -401,6 +493,15 @@ alias t='tree -a -I ".git"'
 
 > 💡 Sin `-a`, `tree` no muestra las carpetas ocultas, como `.config`.
 
+### nmcli
+
+Consulta y gestiona la red con NetworkManager:
+
+| Comando | Efecto |
+|---|---|
+| `nmcli device status` | Dispositivos de red y su estado |
+| `nmcli device show <interfaz>` | Detalle: IP, puerta de enlace, DNS, MAC... |
+
 ---
 
 ## 13. 📥 Restaurar el entorno en otro equipo
@@ -417,9 +518,10 @@ Después, aplica las configuraciones:
 ```bash
 cp -r .config/hypr $HOME/.config/
 cp -r .config/quickshell $HOME/.config/
+chmod +x $HOME/.config/quickshell/scripts/net.sh
 ```
 
-Cierra sesión y entra de nuevo en Hyprland: la barra y el panel arrancan solos.
+Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1](#11-red-networkmanager)). Cierra sesión y entra de nuevo con `start-hyprland`: la barra y el panel arrancan solos.
 
 | Fichero | Contenido |
 |---|---|
@@ -449,8 +551,10 @@ PikSOn/
     │   └── hyprland.lua   # Hyprland: atajos, terminal y arranque automático
     └── quickshell/
         ├── shell.qml      # Punto de entrada
-        ├── Bar.qml        # Barra superior
-        └── Dock.qml       # Panel lateral
+        ├── Bar.qml        # Barra superior (workspaces, reloj, chip de red)
+        ├── Dock.qml       # Panel lateral
+        └── scripts/
+            └── net.sh     # Datos de red para el chip (debe ser ejecutable)
 ```
 
 | Elemento | Descripción |
@@ -459,7 +563,7 @@ PikSOn/
 | `pkglist.txt` | Paquetes oficiales, generada con `pacman -Qqen` |
 | `aur-pkglist.txt` | Paquetes del AUR, generada con `pacman -Qqem` |
 | `.config/hypr/` | Configuración de Hyprland, incluidos los atajos |
-| `.config/quickshell/` | Barra superior y panel lateral |
+| `.config/quickshell/` | Barra superior, panel lateral y scripts de apoyo |
 
 > 💡 Las carpetas de `.config/` replican la ruta que tendrían en `~/.config`. A medida que se configuren más programas, se añadirán aquí.
 
@@ -470,9 +574,14 @@ PikSOn/
 - [x] Ajustar el hueco entre la barra superior y el panel lateral
 - [x] Workspaces en la barra
 - [x] Contenedor fijo para 10 workspaces
+- [x] Cambio a NetworkManager
+- [x] Chip de red en la barra (cable)
+- [ ] Panel desplegable de red al pulsar el chip (IP, puerta de enlace, DNS, MAC, velocidad)
+- [ ] Pestañas Cable / Wi-Fi / Bluetooth en el panel
+- [ ] Probar el Wi-Fi y el Bluetooth en hardware real (`bluez`, `bluez-utils`)
+- [ ] Diseño radial del panel de red
 - [ ] Quitar el registro de depuración de la línea de arranque de Quickshell
 - [ ] Volumen en la barra
-- [ ] Más piezas en la barra, a la derecha del contenedor de workspaces
 - [ ] Iconos reales en el panel lateral
 - [ ] Lanzador de aplicaciones
 - [ ] Fondo de pantalla
