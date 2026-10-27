@@ -62,6 +62,32 @@ ping -c 3 archlinux.org
 
 > 💡 Los nombres de interfaz cambian de un equipo a otro (`enp0s3` en la VM, `enp3s0` en una torre, `wlan0` o `wlp2s0` en un portátil). Por eso nada de este repositorio escribe un nombre fijo: se detecta por **tipo** (`ethernet` o `wifi`).
 
+### 1.2 Audio: PipeWire
+
+`archinstall` no deja instalado el servidor de sonido. Hace falta **PipeWire**, que además aporta `wpctl`, la herramienta que usan el chip de volumen ([9.8](#98-chip-de-volumen-en-la-barra)) y las teclas multimedia de Hyprland.
+
+```bash
+sudo pacman -S --needed pipewire wireplumber pipewire-pulse
+systemctl --user enable --now pipewire pipewire-pulse wireplumber
+```
+
+| Paquete | Función |
+|---|---|
+| `pipewire` | El servidor de sonido |
+| `wireplumber` | El gestor de dispositivos; incluye `wpctl` |
+| `pipewire-pulse` | Compatibilidad con programas que usan PulseAudio (Brave, Discord...) |
+
+> 💡 Estos servicios son **de usuario**: se activan **sin `sudo`** y arrancan en cada inicio de sesión. Si tras reiniciar no hay sonido, repite el `systemctl --user enable --now`.
+
+Comprueba que hay una salida de audio y que responde:
+
+```bash
+wpctl status                                  # debe haber un dispositivo en "Sinks"
+wpctl get-volume @DEFAULT_AUDIO_SINK@         # Volume: 0.40
+```
+
+> 💡 En una VM, con la máquina **apagada**, habilita el audio en *Configuración → Audio → Habilitar audio* (controlador Intel HD Audio). Sin tarjeta de sonido virtual, el chip mostrará `Vol --`.
+
 ---
 
 ## 2. 🪟 Instalar Hyprland
@@ -97,6 +123,8 @@ sudo systemctl enable --now vboxservice
 > 💡 Los programas que dibujan con OpenGL (kitty, Quickshell) fallan en VirtualBox con errores como `invalid arguments for wl_surface#attach` o `Could not create EGL surface`. La solución es la variable `LIBGL_ALWAYS_SOFTWARE=1` (apartados [5](#5--terminal-solución-si-kitty-no-abre) y [9](#9--quickshell-barra-y-panel-lateral)). **No debe usarse en hardware real.**
 
 > 💡 En la VM solo se puede probar la conexión **por cable** (adaptador virtual). El Wi-Fi y el Bluetooth requieren hardware real.
+
+> 💡 El audio virtual de VirtualBox tiene límites (volumen mínimo ≈ 45 % y silencio sin efecto): ver [9.8](#98-chip-de-volumen-en-la-barra).
 
 ---
 
@@ -222,7 +250,7 @@ Añadidos a `~/.config/hypr/hyprland.lua`:
 
 > 💡 `Super + Q` queda libre (antes abría la terminal y `Super + M` salía de Hyprland, ambos sustituidos).
 
-> 💡 La configuración generada ya incluye las teclas multimedia (volumen, brillo y reproducción). Para que funcionen, deben estar instalados `wpctl` (wireplumber), `brightnessctl` y `playerctl`.
+> 💡 La configuración generada ya incluye las teclas multimedia (volumen, brillo y reproducción). Para que funcionen, deben estar instalados `wpctl` (wireplumber, [apartado 1.2](#12-audio-pipewire)), `brightnessctl` y `playerctl`.
 
 ---
 
@@ -244,7 +272,7 @@ La configuración vive en `~/.config/quickshell/` y se divide en piezas:
 | Fichero | Función |
 |---|---|
 | `shell.qml` | Punto de entrada: carga las demás piezas |
-| `Bar.qml` | Barra superior: contenedor fijo de workspaces, reloj, chip de red y panel desplegable de red |
+| `Bar.qml` | Barra superior: contenedor fijo de workspaces, reloj, chips de volumen y de red y panel desplegable de red |
 | `Dock.qml` | Panel lateral derecho con botones de aplicaciones (Brave, Discord) |
 | `scripts/net.sh` | Resumen de la red para el chip (`tipo\|dispositivo\|ip`) |
 | `scripts/netinfo.sh` | Detalle de la red para el panel desplegable (`clave=valor`) |
@@ -309,6 +337,7 @@ Si al editar un `.qml` aparece la ventana **"Config reload failed"**:
 - `Type Bar unavailable` en `shell.qml` es solo la **consecuencia**: la causa real está en la línea del fichero que se cita debajo.
 - Si el mismo error se repite tras editar, probablemente **el fichero no ha cambiado**: comprueba su contenido con `head -3` o `cat -n fichero | sed -n '30,52p'`.
 - Los avisos amarillos (`WARN ... ReferenceError`, `TypeError`) no impiden cargar, pero señalan una errata que rompe una función. Se ven con `qs log`.
+- Cuando el aviso dice **"is not a type"**, compara letra por letra con una línea idéntica que sí funcione: `Stdio` y `Studio`, o `Rectangle` y `Rectagle`, se parecen demasiado a simple vista.
 
 Erratas reales encontradas al montar esta configuración:
 
@@ -318,12 +347,18 @@ Erratas reales encontradas al montar esta configuración:
 | `mondelData is not defined` | Letras cruzadas | `modelData` |
 | `Property 'execDetacged' ... is not a function` | Errata | `execDetached` |
 | `Repeat is not a type` | Falta el final | `Repeater` |
+| `Rectagle is not a type` | Falta una `n` | `Rectangle` |
+| `StudioCollector is not a type` | `Studio` por `Stdio` | `StdioCollector` |
+| `Expected token ':'` | `porperty` por `property` | `property` |
 | `Invalid property assignment: color expected` | Color sin almohadilla (`"89b4fa"`) | `"#89b4fa"` |
 | `Property 'strings' ... is not a function` | Nombre inventado | `substring` |
 | `panelWindth is not defined` | Errata | `panelWidth` |
 | Un panel que no se coloca bajo el chip | Consecuencia del error anterior | Corregir la errata |
+| `Vol undefined%` | La propiedad se declaró como `volPrecent` y se usa `volPercent` | Un único nombre en todo el fichero |
+| `Vol --` con audio funcionando | Falta el bloque `Process { id: volProc ... }` (`volProc is not defined`) | Añadir el bloque completo |
+| La rueda del volumen no hace nada | `"-1"` (número uno) en lugar de `"-l"` (letra ele) en `set-volume` | `"-l"` |
 
-Y en los scripts de shell:
+Y en los scripts de shell y en la terminal:
 
 | Síntoma | Causa | Corrección |
 |---|---|---|
@@ -331,6 +366,8 @@ Y en los scripts de shell:
 | `[: missing ']'` | Falta el espacio antes del corchete final | `[ -z "$dev" ]` |
 | `Device 'dev' not found` | Falta el `$` | `"$dev"` |
 | El chip dice "Sin red" con conexión | El script no es ejecutable | `chmod +x` |
+| `'@DEFAULT_AUDIO_SNIK@' is not a valid number` | `SNIK` por `SINK` | `@DEFAULT_AUDIO_SINK@` |
+| `'10%' is not a valid mute option` | `set-mute` con un porcentaje | `set-volume` para el volumen; `set-mute` solo admite `1`, `0` o `toggle` |
 
 > 💡 Para ficheros largos, lo más seguro es reemplazarlos enteros ([apartado 6](#6--editor-de-texto)) en lugar de retocar llaves a mano.
 
@@ -465,6 +502,61 @@ PopupWindow {
 
 > 💡 El panel se cierra con un segundo clic en el chip; todavía no se cierra al pulsar fuera.
 
+### 9.8 Chip de volumen en la barra
+
+A la izquierda del chip de red se muestra el volumen, por ejemplo **`Vol 40%`**. Requiere PipeWire ([apartado 1.2](#12-audio-pipewire)).
+
+| Acción | Efecto |
+|---|---|
+| **Clic** en el chip | Silencia o reactiva el sonido (`Vol mute`) |
+| **Rueda** hacia arriba o abajo | Sube o baja de 5 en 5 %, con tope en el 100 % |
+| Sin dispositivo de sonido | `Vol --` (en gris) |
+
+Se apoya en `wpctl`, que no necesita ningún script aparte. Las órdenes se pueden probar a mano:
+
+```bash
+wpctl get-volume @DEFAULT_AUDIO_SINK@               # Volume: 0.40  (o  Volume: 0.40 [MUTED])
+wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+    # sube un 5 % (tope 100 %)
+wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle          # alterna el silencio
+```
+
+En `Bar.qml`, el chip se compone de estas piezas:
+
+| Pieza | Función |
+|---|---|
+| `Process` (`volProc`) | Ejecuta `wpctl get-volume` y guarda `volPercent` y `volMuted` |
+| `Timer` (2 s) | Vuelve a leer el volumen, para reflejar cambios hechos con las teclas multimedia |
+| `Timer` (`volRefresh`) | Lee el volumen justo después de un clic o un giro de rueda |
+| `MouseArea` | Clic: `set-mute toggle`; rueda: `set-volume -l 1.0 ... 5%+` o `5%-` |
+
+Lectura del volumen:
+
+```qml
+Process {
+    id: volProc
+    command: ["wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"]
+    running: true
+    stdout: StdioCollector {
+        onStreamFinished: {
+            var t = this.text.trim()
+            if (t.indexOf("Volume:") !== 0) {
+                root.volPercent = -1
+                root.volMuted = false
+            } else {
+                root.volPercent = Math.round(parseFloat(t.split(" ")[1]) * 100)
+                root.volMuted = t.indexOf("MUTED") >= 0
+            }
+        }
+    }
+}
+```
+
+> ⚠️ En `set-volume`, la opción es **`-l`** (letra *ele*, de *limit*), no el número `-1`. Con `-1`, `wpctl` rechaza la orden y la rueda no hace nada.
+
+> ⚠️ **Limitaciones de VirtualBox:** el dispositivo de audio virtual impone un volumen mínimo (≈ 45 %: pedir un 10 % deja 0.45) y **no aplica el silencio** (`set-mute` no cambia nada). El chip muestra fielmente lo que informa `wpctl`; en hardware real el rango es completo y el silencio funciona.
+
+> 💡 `set-volume` y `set-mute` son órdenes distintas: la primera recibe un porcentaje y la segunda solo `1`, `0` o `toggle`.
+
 ---
 
 ## 10. 📦 Programas instalados
@@ -563,6 +655,8 @@ git push
 
 > 💡 Un `commit` sin `git add .` previo no incluye los cambios: los ficheros modificados aparecen en rojo en `git status` hasta que se añaden.
 
+> 💡 Si se sube un fichero por error (por ejemplo, `pklist.txt` por teclear mal `pkglist.txt`), se retira con `git rm -f fichero` y un nuevo `commit` y `push`. Git conserva el historial, así que nada se pierde.
+
 ---
 
 ## 12. 🛠️ Herramientas de apoyo
@@ -597,6 +691,19 @@ Consulta y gestiona la red con NetworkManager:
 | `nmcli device status` | Dispositivos de red y su estado |
 | `nmcli device show <interfaz>` | Detalle: IP, puerta de enlace, DNS, MAC... |
 
+### wpctl
+
+Consulta y controla el audio con PipeWire/WirePlumber:
+
+| Comando | Efecto |
+|---|---|
+| `wpctl status` | Dispositivos de audio, entradas y salidas |
+| `wpctl get-volume @DEFAULT_AUDIO_SINK@` | Volumen de la salida predeterminada |
+| `wpctl set-volume @DEFAULT_AUDIO_SINK@ 50%` | Fija el volumen |
+| `wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle` | Alterna el silencio |
+
+> 💡 Los nombres con arrobas (`@DEFAULT_AUDIO_SINK@`) conviene **copiarlos y pegarlos**: `SINK` se teclea mal con facilidad.
+
 ---
 
 ## 13. 📥 Restaurar el entorno en otro equipo
@@ -616,7 +723,7 @@ cp -r .config/quickshell $HOME/.config/
 chmod +x $HOME/.config/quickshell/scripts/*.sh
 ```
 
-Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1](#11-red-networkmanager)). Cierra sesión y entra de nuevo con `start-hyprland`: la barra y el panel arrancan solos.
+Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1](#11-red-networkmanager)). Activa también el audio ([apartado 1.2](#12-audio-pipewire)): los paquetes de PipeWire llegan con `pkglist.txt`, pero sus servicios de usuario se activan con `systemctl --user enable --now pipewire pipewire-pulse wireplumber`. Cierra sesión y entra de nuevo con `start-hyprland`: la barra y el panel arrancan solos.
 
 | Fichero | Contenido |
 |---|---|
@@ -626,7 +733,7 @@ Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1
 
 > ⚠️ Requiere `yay` instalado ([apartado 7](#7--navegador-brave-y-atajo-de-teclado)). Las listas incluyen `virtualbox-guest-utils`, que solo hace falta en una VM: retíralo en hardware real. En hardware real, quita también `LIBGL_ALWAYS_SOFTWARE=1` de `hyprland.lua` (terminal y Quickshell).
 
-> 💡 Cada vez que instales algo nuevo, regenera las listas:
+> 💡 Cada vez que instales algo nuevo, regenera las listas. Cuidado con el nombre: es `pkglist.txt` (con **g**); un `pklist.txt` crearía un fichero nuevo y distinto.
 > ```bash
 > pacman -Qqen > pkglist.txt
 > pacman -Qqem > aur-pkglist.txt
@@ -646,7 +753,7 @@ PikSOn/
     │   └── hyprland.lua   # Hyprland: atajos, terminal y arranque automático
     └── quickshell/
         ├── shell.qml      # Punto de entrada
-        ├── Bar.qml        # Barra superior (workspaces, reloj, chip y panel de red)
+        ├── Bar.qml        # Barra superior (workspaces, reloj, volumen, chip y panel de red)
         ├── Dock.qml       # Panel lateral
         └── scripts/
             ├── net.sh     # Resumen de red para el chip (debe ser ejecutable)
@@ -673,13 +780,15 @@ PikSOn/
 - [x] Cambio a NetworkManager
 - [x] Chip de red en la barra (cable)
 - [x] Panel desplegable de red al pulsar el chip (IP, puerta de enlace, DNS, MAC, velocidad)
+- [x] Audio con PipeWire
+- [x] Volumen en la barra
+- [ ] Revisar el volumen: actualización instantánea al girar la rueda, y probar el silencio y el rango completo en hardware real (quizá un panel con barra deslizante)
 - [ ] Cerrar el panel de red al pulsar fuera
 - [ ] Pestañas Cable / Wi-Fi / Bluetooth en el panel
 - [ ] Probar el Wi-Fi y el Bluetooth en hardware real (`bluez`, `bluez-utils`)
 - [ ] Diseño radial del panel de red
 - [ ] Fusionar `net.sh` y `netinfo.sh` en un único script
 - [ ] Quitar el registro de depuración de la línea de arranque de Quickshell
-- [ ] Volumen en la barra
 - [ ] Iconos reales en el panel lateral
 - [ ] Lanzador de aplicaciones
 - [ ] Fondo de pantalla
