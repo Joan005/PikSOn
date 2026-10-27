@@ -179,6 +179,8 @@ Uso básico: `Ctrl+O` guarda, `Ctrl+X` sale y `Ctrl+W` busca.
 
 > 💡 Para ficheros largos, también es fiable escribirlos desde la terminal con `cat > fichero <<'EOF'` ... `EOF`, que evita las erratas de teclear a mano.
 
+> ⚠️ Si editas un fichero **por fuera** (con `sed`, por ejemplo) mientras sigue abierto en nano, el aviso **Modified** indica que nano tiene su propia copia sin guardar: al guardar desde nano, **sobrescribirá** el cambio externo. Cierra nano antes, o corrige dentro de nano (`Ctrl + \` busca y reemplaza).
+
 ---
 
 ## 7. 🌐 Navegador Brave y atajo de teclado
@@ -242,9 +244,10 @@ La configuración vive en `~/.config/quickshell/` y se divide en piezas:
 | Fichero | Función |
 |---|---|
 | `shell.qml` | Punto de entrada: carga las demás piezas |
-| `Bar.qml` | Barra superior: contenedor fijo de workspaces, reloj y chip de red |
+| `Bar.qml` | Barra superior: contenedor fijo de workspaces, reloj, chip de red y panel desplegable de red |
 | `Dock.qml` | Panel lateral derecho con botones de aplicaciones (Brave, Discord) |
-| `scripts/net.sh` | Script que consulta NetworkManager y alimenta el chip de red |
+| `scripts/net.sh` | Resumen de la red para el chip (`tipo\|dispositivo\|ip`) |
+| `scripts/netinfo.sh` | Detalle de la red para el panel desplegable (`clave=valor`) |
 
 `shell.qml`:
 
@@ -261,7 +264,7 @@ Para restaurarla desde este repositorio:
 
 ```bash
 cp -r .config/quickshell $HOME/.config/
-chmod +x $HOME/.config/quickshell/scripts/net.sh
+chmod +x $HOME/.config/quickshell/scripts/*.sh
 qs
 ```
 
@@ -304,8 +307,30 @@ Si al editar un `.qml` aparece la ventana **"Config reload failed"**:
 
 - Indica fichero, línea y columna del error (por ejemplo, `@Bar.qml[44:2]`).
 - `Type Bar unavailable` en `shell.qml` es solo la **consecuencia**: la causa real está en la línea del fichero que se cita debajo.
-- Los fallos habituales son una errata de una letra (`QuickQuick`, `mondelData`, `execDetacged`) o una llave `{ }` sin cerrar.
 - Si el mismo error se repite tras editar, probablemente **el fichero no ha cambiado**: comprueba su contenido con `head -3` o `cat -n fichero | sed -n '30,52p'`.
+- Los avisos amarillos (`WARN ... ReferenceError`, `TypeError`) no impiden cargar, pero señalan una errata que rompe una función. Se ven con `qs log`.
+
+Erratas reales encontradas al montar esta configuración:
+
+| Síntoma | Causa | Corrección |
+|---|---|---|
+| `module "QuickQuick" is not installed` | `import QuickQuick` | `import QtQuick` |
+| `mondelData is not defined` | Letras cruzadas | `modelData` |
+| `Property 'execDetacged' ... is not a function` | Errata | `execDetached` |
+| `Repeat is not a type` | Falta el final | `Repeater` |
+| `Invalid property assignment: color expected` | Color sin almohadilla (`"89b4fa"`) | `"#89b4fa"` |
+| `Property 'strings' ... is not a function` | Nombre inventado | `substring` |
+| `panelWindth is not defined` | Errata | `panelWidth` |
+| Un panel que no se coloca bajo el chip | Consecuencia del error anterior | Corregir la errata |
+
+Y en los scripts de shell:
+
+| Síntoma | Causa | Corrección |
+|---|---|---|
+| `argument 'TYPE,' not understood` | Espacio tras la coma en `-f DEVICE, TYPE,STATE` | `-f DEVICE,TYPE,STATE` (sin espacios) |
+| `[: missing ']'` | Falta el espacio antes del corchete final | `[ -z "$dev" ]` |
+| `Device 'dev' not found` | Falta el `$` | `"$dev"` |
+| El chip dice "Sin red" con conexión | El script no es ejecutable | `chmod +x` |
 
 > 💡 Para ficheros largos, lo más seguro es reemplazarlos enteros ([apartado 6](#6--editor-de-texto)) en lugar de retocar llaves a mano.
 
@@ -369,6 +394,76 @@ Timer {
 ```
 
 El fichero completo está en `.config/quickshell/Bar.qml`.
+
+### 9.7 Panel desplegable de red
+
+Al **pulsar el chip**, se ilumina y bajo él se despliega una tarjeta con el detalle de la conexión: **conexión, dispositivo, IP, puerta de enlace, DNS, MAC y velocidad**. Un segundo clic la cierra.
+
+Los datos los entrega un segundo script, `netinfo.sh`, en formato `clave=valor`. `~/.config/quickshell/scripts/netinfo.sh`:
+
+```sh
+#!/bin/sh
+# Imprime clave=valor con el detalle de la conexión activa (ethernet o wifi)
+dev=$(nmcli -t -f DEVICE,TYPE,STATE device | awk -F: '$3=="connected" && ($2=="ethernet" || $2=="wifi") {print $1; exit}')
+if [ -z "$dev" ]; then
+    echo "estado=none"
+    exit 0
+fi
+speed=$(cat "/sys/class/net/$dev/speed" 2>/dev/null)
+case "$speed" in
+    ''|-*) speed="-" ;;
+    *) speed="$speed Mb/s" ;;
+esac
+echo "estado=ok"
+echo "dispositivo=$dev"
+echo "tipo=$(nmcli -g GENERAL.TYPE device show "$dev")"
+echo "conexion=$(nmcli -g GENERAL.CONNECTION device show "$dev")"
+echo "ip=$(nmcli -g IP4.ADDRESS device show "$dev" | cut -d'|' -f1)"
+echo "puerta=$(nmcli -g IP4.GATEWAY device show "$dev")"
+echo "dns=$(nmcli -g IP4.DNS device show "$dev" | tr '|' ' ')"
+echo "mac=$(nmcli -g GENERAL.HWADDR device show "$dev" | tr -d '\\')"
+echo "velocidad=$speed"
+```
+
+Dale permiso de ejecución y pruébalo; debe imprimir nueve líneas, empezando por `estado=ok`, **sin ningún mensaje de error**:
+
+```bash
+chmod +x $HOME/.config/quickshell/scripts/netinfo.sh
+$HOME/.config/quickshell/scripts/netinfo.sh
+```
+
+En `Bar.qml`, el panel se compone de:
+
+| Pieza | Función |
+|---|---|
+| `Process` (`infoProc`) | Ejecuta `netinfo.sh` y convierte cada línea `clave=valor` en una propiedad (`root.info`) |
+| `Timer` (3 s) | Refresca los datos **solo mientras el panel está abierto** |
+| `MouseArea` en el chip | Alterna `root.netOpen` |
+| `PopupWindow` | La tarjeta, anclada a la barra con `anchor.window: root` |
+
+Posición y tamaño de la tarjeta:
+
+```qml
+PopupWindow {
+    id: netPanel
+    readonly property int panelWidth: 300
+
+    anchor.window: root
+    anchor.rect.x: root.width - panelWidth - 8
+    anchor.rect.y: root.height + 4
+    implicitWidth: panelWidth
+    implicitHeight: 215
+    visible: root.netOpen
+    color: "transparent"
+    // ...
+}
+```
+
+> 💡 La tarjeta cuelga del borde derecho (`root.width - panelWidth - 8`) y 4 px por debajo de la barra (`root.height + 4`). Si el panel aparece en la esquina izquierda, suele ser una errata en `panelWidth`.
+
+> 💡 El panel no usa nombres de interfaz: sirve igual para cable y Wi-Fi. Con Wi-Fi, la velocidad aparecerá como `-` (no existe en `/sys/class/net/.../speed`) hasta que se añadan campos propios del Wi-Fi.
+
+> 💡 El panel se cierra con un segundo clic en el chip; todavía no se cierra al pulsar fuera.
 
 ---
 
@@ -518,7 +613,7 @@ Después, aplica las configuraciones:
 ```bash
 cp -r .config/hypr $HOME/.config/
 cp -r .config/quickshell $HOME/.config/
-chmod +x $HOME/.config/quickshell/scripts/net.sh
+chmod +x $HOME/.config/quickshell/scripts/*.sh
 ```
 
 Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1](#11-red-networkmanager)). Cierra sesión y entra de nuevo con `start-hyprland`: la barra y el panel arrancan solos.
@@ -551,10 +646,11 @@ PikSOn/
     │   └── hyprland.lua   # Hyprland: atajos, terminal y arranque automático
     └── quickshell/
         ├── shell.qml      # Punto de entrada
-        ├── Bar.qml        # Barra superior (workspaces, reloj, chip de red)
+        ├── Bar.qml        # Barra superior (workspaces, reloj, chip y panel de red)
         ├── Dock.qml       # Panel lateral
         └── scripts/
-            └── net.sh     # Datos de red para el chip (debe ser ejecutable)
+            ├── net.sh     # Resumen de red para el chip (debe ser ejecutable)
+            └── netinfo.sh # Detalle de red para el panel (debe ser ejecutable)
 ```
 
 | Elemento | Descripción |
@@ -576,10 +672,12 @@ PikSOn/
 - [x] Contenedor fijo para 10 workspaces
 - [x] Cambio a NetworkManager
 - [x] Chip de red en la barra (cable)
-- [ ] Panel desplegable de red al pulsar el chip (IP, puerta de enlace, DNS, MAC, velocidad)
+- [x] Panel desplegable de red al pulsar el chip (IP, puerta de enlace, DNS, MAC, velocidad)
+- [ ] Cerrar el panel de red al pulsar fuera
 - [ ] Pestañas Cable / Wi-Fi / Bluetooth en el panel
 - [ ] Probar el Wi-Fi y el Bluetooth en hardware real (`bluez`, `bluez-utils`)
 - [ ] Diseño radial del panel de red
+- [ ] Fusionar `net.sh` y `netinfo.sh` en un único script
 - [ ] Quitar el registro de depuración de la línea de arranque de Quickshell
 - [ ] Volumen en la barra
 - [ ] Iconos reales en el panel lateral
