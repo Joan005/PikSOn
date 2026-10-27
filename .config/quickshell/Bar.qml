@@ -18,7 +18,14 @@ PanelWindow {
 	property string netDev: ""
 	property string netIp: ""
 
-	
+	//DETALLE PAR AEL PANEL (NET.SH)
+	property bool netOpen: false
+	property var info: ({})
+
+	onNetOpenChanged: {
+		if (netOpen)
+			infoProc.running = true
+	}	
 	SystemClock {
 		id: clock
 		precision: SystemClock.Seconds
@@ -43,13 +50,37 @@ PanelWindow {
 			}
 		}
 	}	
-	
+		
+	Process {
+	id: infoProc
+	command : ["sh", "-c", "$HOME/.config/quickshell/scripts/netinfo.sh"]
+	stdout: StdioCollector {
+		onStreamFinished: {
+			var o = {}
+			var lines = this.text.trim().split("\n")
+			for (var i = 0; i < lines.length; i++) {
+				var k = lines[i].indexOf("=")
+				if (k > 0)
+					o[lines[i].substring(0, k)] = lines[i].substring(k + 1)
+			}
+			root.info = o
+		}
+	}	
+}
+
 	Timer {
 		interval: 5000
 		running: true
 		repeat: true
 		onTriggered: netProc.running = true
 	}
+
+	Timer {
+		interval: 3000
+		running: root.netOpen
+		repeat: true
+		onTriggered: infoProc.running = true
+}
 
 	Rectangle {
 		id: wsBox
@@ -124,6 +155,83 @@ PanelWindow {
 				? "Sin red"
 				: (root.netType === "ethernet" ? "Cable" : "Wi-Fi") + " . " + root.netIp.split("/")[0]
 		}
+	
+		MouseArea {
+			anchors.fill: parent
+			onClicked: root.netOpen = !root.netOpen
+		}
 	}
+	
+	//PANEL DESPLEGABLE DE RED
+	PopupWindow {
+		id: netPanel
+		readonly property int panelWidth: 300
 
+		anchor.window: root
+		anchor.rect.x: root.width - panelWidth -8
+		anchor.rect.y: root.height + 4
+		implicitWidth: panelWidth
+		implicitHeight: 215
+		visible: root.netOpen
+		color: "transparent"
+
+		Rectangle {
+			anchors.fill: parent
+			radius: 10
+			color: "#1e1e2e"
+			border.color: "#313244"
+			border.width: 1
+		
+		Column {
+			anchors.fill: parent
+			anchors.margins: 14
+			spacing: 8
+
+			Text {
+				text: root.info.estado === "ok" ? "Red . " + root.info.tipo : "Sin Conexion"
+				color: "#89b4fa"
+				font.pixelSize: 15
+				font.bold: true
+			}
+
+			Repeater {
+				model: root.info.estado === "ok" ? [
+					{ k: "Conexion", v: root.info.conexion },
+					{ k: "Dispositivo", v: root.info.dispositivo },
+					{ k: "IP", v: root.info.ip },
+					{ k: "Puerta de enlace", v: root.info.puerta },
+					{ k: "DNS", v: root.info.dns },
+					{ k: "MAC", v: root.info.mac },
+					{ k: "Velocidad", v: root.info.velocidad }
+				] : []
+				
+				Row {
+					spacing: 8
+					
+					Text {
+						width: 120
+						text: modelData.k
+						color: "#a6adc8"
+						font.pixelSize: 12
+					}
+			
+					Text {
+						text: modelData.v ? modelData.v : "-"
+						color: "#cdd6f4"
+						font.pixelSize: 12
+					}
+				}
+			}
+		}
+	}
 }
+}
+		
+
+
+
+
+
+
+
+
