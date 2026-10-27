@@ -12,6 +12,8 @@ linux
 linux-firmware
 mkinitcpio
 nano
+networkmanager
+pipewire-pulse
 polkit
 quickshell
 sudo
@@ -19,5 +21,6 @@ tree
 ttf-jetbrains-mono-nerd
 virtualbox-guest-utils
 vulkan-virtio
+wireplumber
 xdg-desktop-portal-hyprland
 zram-generator

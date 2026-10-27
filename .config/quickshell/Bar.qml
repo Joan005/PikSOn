@@ -22,6 +22,10 @@ PanelWindow {
 	property bool netOpen: false
 	property var info: ({})
 
+	//VOLUMEN SIN DATOS
+	property int volPercent: -1
+	property bool volMuted: false
+
 	onNetOpenChanged: {
 		if (netOpen)
 			infoProc.running = true
@@ -68,6 +72,25 @@ PanelWindow {
 	}	
 }
 
+	Process {
+		id: volProc
+		command: ["wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"]
+		running: true
+		stdout: StdioCollector {
+			onStreamFinished: {
+				var t = this.text.trim()
+				if (t.indexOf("Volume:") !==0) {
+					root.volPercent = -1
+					root.volMuted = false
+				} else {
+					root.volPercent = Math.round(parseFloat(t.split(" ")[1]) * 100)
+					root.volMuted = t.indexOf("MUTED") >= 0
+
+				}
+			}
+		}
+	}
+
 	Timer {
 		interval: 5000
 		running: true
@@ -80,6 +103,20 @@ PanelWindow {
 		running: root.netOpen
 		repeat: true
 		onTriggered: infoProc.running = true
+}
+	
+	Timer {
+		interval: 2000
+		running: true
+		repeat: true
+		onTriggered: infoProc.running = true		
+}
+
+	Timer {
+		id: volRefresh
+		interval: 200
+		onTriggered: volProc.running = true
+
 }
 
 	Rectangle {
@@ -162,6 +199,41 @@ PanelWindow {
 		}
 	}
 	
+	Rectangle {
+		id: volChip
+		anchors.right: netChip.left
+		anchors.rightMargin: 6
+		anchors.verticalCenter: parent.verticalCenter
+		width: volText.implicitWidth + 16
+		height: 19
+		radius: 5
+		color: (root.volMuted || root.volPercent < 0) ? "#45475a" : "#313244"
+
+		Text {
+			id: volText
+			anchors.centerIn: parent
+			color: "#cdd6f4"
+			font.pixelSize: 12
+			text: root.volPercent < 0
+				? "Vol --"
+				: (root.volMuted ? "Vol mute" : "Vol " + root.volPercent + "%")
+		} 
+
+		MouseArea {
+			anchors.fill: parent
+			onClicked: {
+				Quickshell.execDetached(["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"])
+				volRefresh.restart()
+			}
+			onWheel: (wheel) => {
+				var paso = wheel.angleDelta.y > 0 ? "5%+" : "5%-"
+				Quickshell.execDetached(["wpctl", "set-volume", "-l", "1.0", "@DEFAULT_AUDIO_SINK@", paso])
+				volRefresh.restart()
+			}
+		}
+	}
+
+
 	//PANEL DESPLEGABLE DE RED
 	PopupWindow {
 		id: netPanel
