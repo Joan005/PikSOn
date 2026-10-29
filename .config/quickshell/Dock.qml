@@ -11,7 +11,7 @@ PanelWindow {
 		top: 0
 	}
 	implicitWidth: 30
-	color: "#1e1e2e"
+	color: "transparent"
 
 	Column {
 		anchors.horizontalCenter: parent.horizontalCenter

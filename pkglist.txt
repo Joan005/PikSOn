@@ -16,6 +16,7 @@ networkmanager
 pipewire-pulse
 polkit
 quickshell
+starship
 sudo
 tree
 ttf-jetbrains-mono-nerd
@@ -24,3 +25,6 @@ vulkan-virtio
 wireplumber
 xdg-desktop-portal-hyprland
 zram-generator
+zsh
+zsh-autosuggestions
+zsh-syntax-highlighting

@@ -11,7 +11,7 @@ PanelWindow {
 		right: true
 	}
 	implicitHeight: 25
-	color: "#1e1e2e"
+	color: "transparent"
 	
 	//ESTADO DE LA RED ACTUALIZADO POR NET.SH
 	property string netType: "none"
