@@ -140,6 +140,37 @@ start-hyprland
 
 > ⚠️ Entra **siempre con `start-hyprland`**, también al volver a entrar tras salir de la sesión. Arrancar `Hyprland` directamente funciona, pero muestra el aviso *"Hyprland was started without start-hyprland. This is strongly discouraged unless you are in a debugging environment"*: el lanzador prepara el entorno de la sesión y vigila el proceso.
 
+### 4.1 Arranque automático de Hyprland
+
+Para no teclear `start-hyprland` cada vez, se puede lanzar solo al iniciar sesión en el TTY. Se sigue escribiendo **usuario y contraseña** (no hay autologin): lo único que se automatiza es el último paso.
+
+Con zsh como shell de inicio de sesión ([apartado 12](#12-herramientas-de-apoyo)), el fichero que se lee al entrar es `~/.zprofile`:
+
+```zsh
+# arranca Hyprland automaticamente al iniciar sesion en el TTY1
+if [ -z "$WAYLAND_DISPLAY" ] && [ "$XDG_VTNR" = "1" ]; then
+    exec start-hyprland
+fi
+```
+
+| Línea | Para qué |
+|---|---|
+| `-z "$WAYLAND_DISPLAY"` | Solo si **no** hay ya un escritorio en marcha, para no arrancarlo dos veces |
+| `"$XDG_VTNR" = "1"` | Solo en el **TTY1**: los demás TTY quedan libres como vía de rescate |
+| `exec start-hyprland` | Sustituye la shell por Hyprland; al salir de él, se cierra la sesión |
+
+Para probarlo, sin reiniciar: `Super + Shift + E` para salir de Hyprland, `exit` en el TTY e iniciar sesión de nuevo.
+
+> ⚠️ **Salir de Hyprland ahora cierra la sesión** y vuelve al `login:`. Si necesitas una terminal fuera de Hyprland (por ejemplo, para corregir un fallo), usa el **TTY2**: `Ctrl derecho + F2` (en VirtualBox, *Entrada → Teclado → Insertar Ctrl-Alt-F2*) e inicia sesión ahí; **no** arranca Hyprland. Vuelve al TTY1 con `Ctrl derecho + F1`.
+
+> ⚠️ Si Hyprland falla al arrancar (por ejemplo, por un error en `hyprland.lua`), el TTY1 volverá al `login:` una y otra vez. Repara desde el TTY2, o desactiva temporalmente el arranque automático: `mv ~/.zprofile ~/.zprofile.off`.
+
+> 💡 La comprobación de `$WAYLAND_DISPLAY` lleva `$`. Sin él (`-z "WAYLAND_DISPLAY"`) se compara el texto literal, nunca está vacío y Hyprland no arrancaría solo.
+
+> 💡 Si la shell fuera bash, el fichero equivalente es `~/.bash_profile`.
+
+> 💡 El TTY negro de `login:` es solo un login en modo texto. En hardware real se puede sustituir por un **gestor de inicio gráfico** (SDDM, greetd con un greeter, etc.): si se instala, hay que **quitar este bloque** de `~/.zprofile` para no lanzar Hyprland dos veces ([apartado 15](#15--pendiente)).
+
 ---
 
 ## 5. 🔧 Terminal: kitty
@@ -318,6 +349,37 @@ Añadidos a `~/.config/hypr/hyprland.lua`:
 
 > 💡 La configuración generada ya incluye las teclas multimedia (volumen, brillo y reproducción). Para que funcionen, deben estar instalados `wpctl` (wireplumber, [apartado 1.2](#12-audio-pipewire)), `brightnessctl` y `playerctl`.
 
+### Otros ajustes de `hyprland.lua`: tamaño del cursor
+
+El puntero del ratón usa el tema **Adwaita** (el de por defecto) y Hyprland arranca con un tamaño de **24**. Para reducirlo, se cambian las variables de entorno de la sección `ENVIRONMENT VARIABLES` de `~/.config/hypr/hyprland.lua`:
+
+```lua
+hl.env("XCURSOR_SIZE", "16")
+hl.env("HYPRCURSOR_SIZE", "16")
+```
+
+| Variable | Qué fija |
+|---|---|
+| `XCURSOR_SIZE` | Tamaño del cursor para las aplicaciones normales y XWayland |
+| `HYPRCURSOR_SIZE` | Tamaño para los temas de cursor propios de Hyprland (*hyprcursor*) |
+
+**Probar un tamaño al instante** (solo dura hasta cerrar la sesión), con el nombre del tema que muestra `ls /usr/share/icons`:
+
+```bash
+ls /usr/share/icons                  # Adwaita  AdwaitaLegacy  default  hicolor
+hyprctl setcursor Adwaita 16
+```
+
+Las variables solo se leen al arrancar: tras cambiarlas, **cierra sesión y vuelve a entrar**. Comprueba con:
+
+```bash
+echo "tema=[$XCURSOR_THEME] tamaño=[$XCURSOR_SIZE]"     # tamaño=[16]
+```
+
+> 💡 El tema queda vacío (se usa el de por defecto). Para cambiarlo: `hl.env("XCURSOR_THEME", "NombreDelTema")` con el nombre de una carpeta de `/usr/share/icons`.
+
+> 💡 Algunas aplicaciones GTK (como Brave) pueden conservar su propio tamaño de cursor; se ajusta aparte en la configuración de GTK.
+
 ---
 
 ## 9. 🧩 Quickshell: barra, panel lateral y fondo
@@ -440,6 +502,8 @@ Y en los scripts de shell y en la terminal:
 | `'@DEFAULT_AUDIO_SNIK@' is not a valid number` | `SNIK` por `SINK` | `@DEFAULT_AUDIO_SINK@` |
 | `'10%' is not a valid mute option` | `set-mute` con un porcentaje | `set-volume` para el volumen; `set-mute` solo admite `1`, `0` o `toggle` |
 | `no such option: nonmatch` (al abrir zsh) | Esa opción no existe | `unsetopt nomatch` (ver [12](#12-herramientas-de-apoyo)) |
+| Hyprland no arranca solo tras el login | `-z "WAYLAND_DISPLAY"` sin `$` en `~/.zprofile` (compara texto literal, nunca vacío) | `-z "$WAYLAND_DISPLAY"` ([4.1](#41-arranque-automático-de-hyprland)) |
+| `unrecognized argument: --online` (git) | `--online` por `--oneline` | `git log --oneline` |
 
 > 💡 Para ficheros largos, lo más seguro es reemplazarlos enteros ([apartado 6](#6--editor-de-texto)) en lugar de retocar llaves a mano.
 
@@ -796,11 +860,13 @@ git pull --no-rebase --no-edit
 git push
 ```
 
-> 💡 `git status` solo refleja lo último que git descargó, no el estado actual de GitHub. Para consultar si hay novedades sin mezclar nada: `git fetch` y después `git status` (indicará `behind` si hay cambios remotos).
+> 💡 `git status` solo refleja lo último que git descargó, no el estado actual de GitHub. Para consultar si hay novedades sin mezclar nada: `git fetch` y después `git status` (indicará `behind` si hay cambios remotos). Si `git fetch` no imprime nada y `git status` sigue limpio, local y remoto coinciden.
 
 > 💡 Un `commit` sin `git add .` previo no incluye los cambios: los ficheros modificados aparecen en rojo en `git status` hasta que se añaden.
 
 > 💡 Si se sube un fichero por error (por ejemplo, `pklist.txt` por teclear mal `pkglist.txt`), se retira con `git rm -f fichero` y un nuevo `commit` y `push`. Git conserva el historial, así que nada se pierde.
+
+> 💡 Ajustes del sistema, como la shell por defecto (`chsh`), **no** son ficheros del repositorio: git no los guarda. Se documentan en el README y se repiten en cada equipo.
 
 ---
 
@@ -932,7 +998,7 @@ Pide la contraseña (no se ve al teclear). Para volver a bash: `chsh -s /bin/bas
 > 1. `Super + Shift + E` para salir de Hyprland.
 > 2. `exit` en el TTY y vuelve a iniciar sesión con tu usuario.
 > 3. `echo $SHELL` debe decir `/usr/bin/zsh`.
-> 4. `start-hyprland`.
+> 4. Hyprland arranca solo si tienes el `~/.zprofile` ([apartado 4.1](#41-arranque-automático-de-hyprland)); si no, `start-hyprland`.
 
 | Comprobación | Qué muestra |
 |---|---|
@@ -973,13 +1039,14 @@ cp -r .config/quickshell $HOME/.config/
 cp -r .config/kitty $HOME/.config/
 chmod +x $HOME/.config/quickshell/scripts/*.sh
 cp zsh/.zshrc $HOME/.zshrc
+cp zsh/.zprofile $HOME/.zprofile      # opcional: arranque automático de Hyprland
 ```
 
 El fondo de pantalla viaja dentro de `.config/quickshell/` (`Wallpaper.qml` y `wallpaper.jpg`).
 
 Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1](#11-red-networkmanager)). Activa también el audio ([apartado 1.2](#12-audio-pipewire)): los paquetes de PipeWire llegan con `pkglist.txt`, pero sus servicios de usuario se activan con `systemctl --user enable --now pipewire pipewire-pulse wireplumber`.
 
-**Cambia la shell a zsh** (`chsh -s /usr/bin/zsh`; este ajuste **no viaja con el repositorio**) y **cierra la sesión del TTY** (`exit`) para iniciarla de nuevo: salir de Hyprland no basta ([apartado 12](#12-herramientas-de-apoyo)). Después entra con `start-hyprland`: la barra, el panel y el fondo arrancan solos.
+**Cambia la shell a zsh** (`chsh -s /usr/bin/zsh`; este ajuste **no viaja con el repositorio**) y **cierra la sesión del TTY** (`exit`) para iniciarla de nuevo: salir de Hyprland no basta ([apartado 12](#12-herramientas-de-apoyo)). Con el `.zprofile` copiado, Hyprland arranca solo tras el login ([apartado 4.1](#41-arranque-automático-de-hyprland)); si no, entra con `start-hyprland`. La barra, el panel y el fondo arrancan solos.
 
 | Fichero | Contenido |
 |---|---|
@@ -987,6 +1054,7 @@ Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1
 | `aur-pkglist.txt` | Paquetes del AUR |
 | `.config/` | Configuración de Hyprland, Quickshell y kitty |
 | `zsh/.zshrc` | Configuración de zsh (se copia a `~/.zshrc`) |
+| `zsh/.zprofile` | Arranque automático de Hyprland en el TTY1 (se copia a `~/.zprofile`) |
 
 > ⚠️ Requiere `yay` instalado ([apartado 7](#7--navegador-brave-y-atajo-de-teclado)). Las listas incluyen `virtualbox-guest-utils`, que solo hace falta en una VM: retíralo en hardware real. En hardware real, quita también `LIBGL_ALWAYS_SOFTWARE=1` de `hyprland.lua` (terminal y Quickshell).
 
@@ -1006,10 +1074,11 @@ PikSOn/
 ├── pkglist.txt              # Paquetes de los repositorios oficiales
 ├── aur-pkglist.txt          # Paquetes del AUR
 ├── zsh/
-│   └── .zshrc               # Configuración de zsh (se copia a ~/.zshrc)
+│   ├── .zshrc               # Configuración de zsh (se copia a ~/.zshrc)
+│   └── .zprofile            # Arranque automático de Hyprland (se copia a ~/.zprofile)
 └── .config/                 # Configuraciones (se copian a ~/.config)
     ├── hypr/
-    │   └── hyprland.lua     # Hyprland: atajos, terminal y arranque automático
+    │   └── hyprland.lua     # Hyprland: atajos, cursor, terminal y arranque automático
     ├── kitty/
     │   └── kitty.conf       # Terminal: tipografía, colores y transparencia
     └── quickshell/
@@ -1029,11 +1098,12 @@ PikSOn/
 | `pkglist.txt` | Paquetes oficiales, generada con `pacman -Qqen` |
 | `aur-pkglist.txt` | Paquetes del AUR, generada con `pacman -Qqem` |
 | `zsh/.zshrc` | Shell zsh con plugins y starship |
-| `.config/hypr/` | Configuración de Hyprland, incluidos los atajos |
+| `zsh/.zprofile` | Lanza Hyprland al iniciar sesión en el TTY1 |
+| `.config/hypr/` | Configuración de Hyprland, incluidos los atajos y el cursor |
 | `.config/kitty/` | Configuración del terminal |
 | `.config/quickshell/` | Barra superior, panel lateral, fondo y scripts de apoyo |
 
-> 💡 Las carpetas de `.config/` replican la ruta que tendrían en `~/.config`. `zsh/` está fuera porque `.zshrc` vive en la carpeta personal; con GNU Stow se enlazará automáticamente.
+> 💡 Las carpetas de `.config/` replican la ruta que tendrían en `~/.config`. `zsh/` está fuera porque `.zshrc` y `.zprofile` viven en la carpeta personal; con GNU Stow se enlazarán automáticamente.
 
 ---
 
@@ -1052,6 +1122,8 @@ PikSOn/
 - [x] Barra y panel lateral transparentes (islas flotantes)
 - [x] Zsh, plugins y prompt (configurados y probados)
 - [x] Cambiar la shell por defecto a zsh (`chsh -s /usr/bin/zsh`)
+- [x] Arranque automático de Hyprland tras el login (`~/.zprofile`)
+- [x] Cursor del ratón más pequeño (tamaño 16)
 - [ ] Máscara de entrada en la barra y el panel transparentes (que los huecos no bloqueen clics ni reserven espacio)
 - [ ] Fondo de pantalla: la imagen no se ve centrada ni ocupando todo; revisar `hyprctl monitors` y `hyprctl layers`
 - [ ] Transparencia del resto de ventanas desde Hyprland, y bordes, esquinas redondeadas y desenfoque (el desenfoque es pesado en la VM)
@@ -1068,6 +1140,7 @@ PikSOn/
 - [ ] Pantalla de bloqueo
 - [ ] Notificaciones
 - [ ] Paleta ANSI de 16 colores en kitty
-- [ ] GNU Stow para enlazar configuraciones (incluida `zsh/.zshrc`)
+- [ ] Login gráfico en hardware real (SDDM, greetd con un greeter o uno propio con Quickshell), quitando el bloque de `~/.zprofile`
+- [ ] GNU Stow para enlazar configuraciones (incluidos `zsh/.zshrc` y `zsh/.zprofile`)
 - [ ] Script `install.sh` que automatice este manual
 - [ ] Probar el manual completo en una VM limpia
