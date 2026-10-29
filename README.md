@@ -917,14 +917,29 @@ zsh
 | `cd ` y `Tab` | Menú de carpetas navegable |
 | Inicio, Fin y Supr | Si no funcionan, añade `bindkey` (ver abajo) |
 
-`exit` vuelve a bash. Para hacerla **la shell por defecto** (se aplica al iniciar sesión de nuevo; sal de Hyprland con `Super + Shift + E` y vuelve con `start-hyprland`):
+`exit` vuelve a bash. Escribir `zsh` solo abre una sesión **de prueba** dentro de la terminal.
+
+#### Hacerla la shell por defecto
 
 ```bash
 chsh -s /usr/bin/zsh
-echo $SHELL              # /usr/bin/zsh
+getent passwd $USER | cut -d: -f7     # lo GUARDADO: /usr/bin/zsh (se ve al instante)
 ```
 
-Para volver a bash: `chsh -s /bin/bash`.
+Pide la contraseña (no se ve al teclear). Para volver a bash: `chsh -s /bin/bash`.
+
+> ⚠️ **Salir de Hyprland no basta.** Tras `chsh`, el TTY desde el que se lanza `start-hyprland` se abrió antes del cambio y conserva `SHELL=/usr/bin/bash`, que heredan Hyprland y kitty. Cierra la sesión del TTY y vuelve a iniciarla (o reinicia el equipo):
+> 1. `Super + Shift + E` para salir de Hyprland.
+> 2. `exit` en el TTY y vuelve a iniciar sesión con tu usuario.
+> 3. `echo $SHELL` debe decir `/usr/bin/zsh`.
+> 4. `start-hyprland`.
+
+| Comprobación | Qué muestra |
+|---|---|
+| `getent passwd $USER \| cut -d: -f7` | La shell **guardada** para la cuenta (cambia al ejecutar `chsh`) |
+| `echo $SHELL` | La shell de la **sesión en marcha** (cambia al iniciar sesión de nuevo) |
+
+> 💡 El cambio de shell es **un ajuste del sistema** (`/etc/passwd`), no un fichero del repositorio: git no lo guarda ni lo restaura. Con el `.zshrc` se clona la configuración de zsh, pero **en cada equipo nuevo hay que repetir `chsh`**.
 
 > 💡 Hyprland, Quickshell y los scripts (`net.sh`, `netinfo.sh`) usan `/bin/sh`, **no** la shell del usuario: cambiar a zsh no les afecta.
 
@@ -962,7 +977,9 @@ cp zsh/.zshrc $HOME/.zshrc
 
 El fondo de pantalla viaja dentro de `.config/quickshell/` (`Wallpaper.qml` y `wallpaper.jpg`).
 
-Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1](#11-red-networkmanager)). Activa también el audio ([apartado 1.2](#12-audio-pipewire)): los paquetes de PipeWire llegan con `pkglist.txt`, pero sus servicios de usuario se activan con `systemctl --user enable --now pipewire pipewire-pulse wireplumber`. Para usar zsh como shell: `chsh -s /usr/bin/zsh` ([apartado 12](#12-herramientas-de-apoyo)). Cierra sesión y entra de nuevo con `start-hyprland`: la barra, el panel y el fondo arrancan solos.
+Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1](#11-red-networkmanager)). Activa también el audio ([apartado 1.2](#12-audio-pipewire)): los paquetes de PipeWire llegan con `pkglist.txt`, pero sus servicios de usuario se activan con `systemctl --user enable --now pipewire pipewire-pulse wireplumber`.
+
+**Cambia la shell a zsh** (`chsh -s /usr/bin/zsh`; este ajuste **no viaja con el repositorio**) y **cierra la sesión del TTY** (`exit`) para iniciarla de nuevo: salir de Hyprland no basta ([apartado 12](#12-herramientas-de-apoyo)). Después entra con `start-hyprland`: la barra, el panel y el fondo arrancan solos.
 
 | Fichero | Contenido |
 |---|---|
@@ -1034,7 +1051,7 @@ PikSOn/
 - [x] `kitty.conf` propio (tipografía, colores y transparencia)
 - [x] Barra y panel lateral transparentes (islas flotantes)
 - [x] Zsh, plugins y prompt (configurados y probados)
-- [ ] Cambiar la shell por defecto a zsh (`chsh -s /usr/bin/zsh`)
+- [x] Cambiar la shell por defecto a zsh (`chsh -s /usr/bin/zsh`)
 - [ ] Máscara de entrada en la barra y el panel transparentes (que los huecos no bloqueen clics ni reserven espacio)
 - [ ] Fondo de pantalla: la imagen no se ve centrada ni ocupando todo; revisar `hyprctl monitors` y `hyprctl layers`
 - [ ] Transparencia del resto de ventanas desde Hyprland, y bordes, esquinas redondeadas y desenfoque (el desenfoque es pesado en la VM)
