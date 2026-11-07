@@ -123,7 +123,7 @@ PanelWindow {
 		id: wsBox
 		readonly property int cell: 24
 		readonly property int gap: 5
-		readonly property int slots: 10
+		readonly property int slots: 5
 		readonly property int pad: 6
 		
 		anchors.left: parent.left
