@@ -118,6 +118,12 @@ PanelWindow {
 		onTriggered: volProc.running = true
 
 }
+	
+	Player {
+		anchors.left: wsBox.right
+		anchors.leftMargin: 8
+		anchors.verticalCenter: wsBox.verticalCenter
+	}
 
 	Rectangle {
 		id: wsBox
