@@ -22,11 +22,12 @@ PikSOn/
         ├── shell.qml        # Punto de entrada
         ├── Wallpaper.qml    # Fondo de pantalla
         ├── wallpaper.jpg    # Imagen del fondo
-        ├── Bar.qml          # Barra superior (workspaces, reloj, volumen, chip y panel de red)
-        ├── Dock.qml         # Panel lateral
+        ├── Bar.qml          # Barra superior (5 workspaces, reloj, volumen, chip y panel de red)
+        ├── Dock.qml         # Panel lateral: bandeja del sistema (apps en segundo plano)
         └── scripts/
             ├── net.sh       # Resumen de red para el chip (debe ser ejecutable)
-            └── netinfo.sh   # Detalle de red para el panel (debe ser ejecutable)
+            ├── netinfo.sh   # Detalle de red para el panel (debe ser ejecutable)
+            └── trayquit.sh  # Cierra la app de un icono de la bandeja (debe ser ejecutable)
 ```
 
 | Elemento | Descripción |
@@ -38,7 +39,7 @@ PikSOn/
 | `zsh/.zprofile` | Lanza Hyprland al iniciar sesión en el TTY1 |
 | `.config/hypr/` | Configuración de Hyprland, incluidos los atajos y el cursor |
 | `.config/kitty/` | Configuración del terminal |
-| `.config/quickshell/` | Barra superior, panel lateral, fondo y scripts de apoyo |
+| `.config/quickshell/` | Barra superior, bandeja del sistema, fondo y scripts de apoyo |
 
 > 💡 Las carpetas de `.config/` replican la ruta que tendrían en `~/.config`. `zsh/` está fuera porque `.zshrc` y `.zprofile` viven en la carpeta personal; con GNU Stow se enlazarán automáticamente.
 
@@ -334,6 +335,7 @@ Uso básico: `Ctrl+O` guarda, `Ctrl+X` sale y `Ctrl+W` busca.
 
 | Paso | Atajo |
 |---|---|
+| Desactivar la sangría automática (antes de pegar código) | `Alt + I` (el mismo atajo la vuelve a activar) |
 | Ir al principio del fichero | `Alt + \` |
 | Cortar desde el cursor hasta el final (lo deja vacío) | `Alt + T` |
 | Pegar el contenido nuevo | `Ctrl + Shift + V` (o clic derecho / `Shift + Insert`) |
@@ -341,7 +343,7 @@ Uso básico: `Ctrl+O` guarda, `Ctrl+X` sale y `Ctrl+W` busca.
 
 > ⚠️ Pega **solo el contenido del fichero**. Las líneas `cat > fichero <<'EOF'` y `EOF` son parte de otro método (escribir desde la terminal) y **no deben pegarse dentro de nano**: `EOF` quedaría escrito en el fichero y lo rompería.
 
-> 💡 Para ficheros largos, también es fiable escribirlos desde la terminal con `cat > fichero <<'EOF'` ... `EOF`, que evita las erratas de teclear a mano.
+> 💡 Para ficheros largos, pegar es más fiable que teclear: las erratas de teclear a mano (letras que faltan o sobran, espacios, líneas partidas) son la causa de casi todos los fallos de la tabla del [apartado 9.5](#95-solución-de-problemas).
 
 > ⚠️ Si editas un fichero **por fuera** (con `sed`, por ejemplo) mientras sigue abierto en nano, el aviso **Modified** indica que nano tiene su propia copia sin guardar: al guardar desde nano, **sobrescribirá** el cambio externo. Cierra nano antes, o corrige dentro de nano (`Ctrl + \` busca y reemplaza).
 
@@ -352,6 +354,8 @@ Uso básico: `Ctrl+O` guarda, `Ctrl+X` sale y `Ctrl+W` busca.
 ```bash
 echo "set linenumbers" >> $HOME/.nanorc
 ```
+
+Para ir directamente a una línea: `Ctrl + _` (barra baja), el número y `Enter`.
 
 ---
 
@@ -396,6 +400,8 @@ Añadidos a `~/.config/hypr/hyprland.lua`:
 
 > 💡 `Super + Q` queda libre (antes abría la terminal y `Super + M` salía de Hyprland, ambos sustituidos).
 
+> 💡 Los atajos de **workspaces** (`Super + 1…5` para ir a un escritorio y `Super + Shift + 1…5` para mover la ventana activa) llegan solo hasta el **5**, igual que la barra ([9.2](#92-ficheros-de-configuración)): así no se pueden crear escritorios que la barra no muestra.
+
 > 💡 La configuración generada ya incluye las teclas multimedia (volumen, brillo y reproducción). Para que funcionen, deben estar instalados `wpctl` (wireplumber, [apartado 1.2](#12-audio-pipewire)), `brightnessctl` y `playerctl`.
 
 ### Otros ajustes de `hyprland.lua`: tamaño del cursor
@@ -434,7 +440,7 @@ echo "tema=[$XCURSOR_THEME] tamaño=[$XCURSOR_SIZE]"     # tamaño=[16]
 <a id="s9"></a>
 ## 9. 🧩 Quickshell: barra, panel lateral y fondo
 
-**Quickshell** es un kit para construir la interfaz del escritorio (barras, paneles, widgets) con QML. Aquí se usa para una barra superior, un panel lateral con aplicaciones y el fondo de pantalla.
+**Quickshell** es un kit para construir la interfaz del escritorio (barras, paneles, widgets) con QML. Aquí se usa para una barra superior, un panel lateral que hace de **bandeja del sistema** (las aplicaciones que siguen abiertas en segundo plano) y el fondo de pantalla.
 
 ### 9.1 Instalación
 
@@ -452,10 +458,11 @@ La configuración vive en `~/.config/quickshell/` y se divide en piezas:
 | `shell.qml` | Punto de entrada: carga las demás piezas |
 | `Wallpaper.qml` | Fondo de pantalla (una ventana en la capa `Background`) |
 | `wallpaper.jpg` | La imagen del fondo |
-| `Bar.qml` | Barra superior: contenedor fijo de workspaces, reloj, chips de volumen y de red y panel desplegable de red |
-| `Dock.qml` | Panel lateral derecho con botones de aplicaciones (Brave, Discord) |
+| `Bar.qml` | Barra superior: contenedor fijo de 5 workspaces, reloj, chips de volumen y de red y panel desplegable de red |
+| `Dock.qml` | Panel lateral derecho = **bandeja del sistema**: muestra solo las apps que siguen abiertas en segundo plano ([9.4](#94-bandeja-del-sistema-panel-lateral)) |
 | `scripts/net.sh` | Resumen de la red para el chip (`tipo\|dispositivo\|ip`) |
 | `scripts/netinfo.sh` | Detalle de la red para el panel desplegable (`clave=valor`) |
+| `scripts/trayquit.sh` | Cierra del todo la app de un icono de la bandeja (lo usa el botón "Cerrar") |
 
 `shell.qml`:
 
@@ -479,11 +486,11 @@ qs
 
 Quickshell **recarga solo** al guardar un fichero. Si hay un error, aparece una ventana con la línea y el motivo.
 
-> 💡 Los recuadros numerados de la izquierda de la barra son los **workspaces** (escritorios virtuales) de Hyprland. Solo aparecen los que existen: se crean al usarlos (por ejemplo, `Super + 2`, según la configuración por defecto), y un clic sobre el número cambia de escritorio.
+> 💡 Los recuadros numerados de la izquierda de la barra son los **workspaces** (escritorios virtuales) de Hyprland. Solo hay **5**; un clic sobre el número cambia de escritorio.
 
-> 💡 Los workspaces van dentro de un **contenedor oscuro de anchura fija** (297 px), calculada para 10 recuadros: `10 × 24 px + 9 × 5 px de separación + 12 px de margen interior`. Así el espacio queda reservado aunque solo exista un workspace, y las piezas que se añadan a su derecha no se desplazan. Para anclar otra pieza junto a él, se usa `anchors.left: wsBox.right`.
+> 💡 Los workspaces van dentro de un **contenedor oscuro de anchura fija** (152 px), calculada para 5 recuadros: `5 × 24 px + 4 × 5 px de separación + 12 px de margen interior`. Así el espacio queda reservado aunque solo exista un workspace, y las piezas que se añadan a su derecha no se desplazan. El número de recuadros es la propiedad **`slots`** de `wsBox` en `Bar.qml` (`cell` es el tamaño de cada recuadro y `gap` la separación): al cambiarla, el contenedor se recalcula solo. Para anclar otra pieza junto a él, se usa `anchors.left: wsBox.right`.
 
-> 💡 `Dock.qml` usa `margins { top: 0 }`: Quickshell ya reserva el espacio de la barra superior, y un margen manual lo duplicaría, dejando un hueco entre ambos paneles.
+> 💡 El panel lateral (`Dock.qml`) está anclado arriba, a la derecha y abajo: así reserva una franja de 34 px y las ventanas no pasan por debajo de los iconos. Quickshell ya descuenta el espacio de la barra superior, por lo que no hace falta ningún margen manual arriba.
 
 ### 9.3 Arranque automático
 
@@ -500,15 +507,91 @@ end)
 
 > 💡 Para depurar un fallo de arranque, redirige la salida a un fichero: `hl.exec_cmd("qs > $HOME/qs-arranque.log 2>&1")`.
 
-### 9.4 Añadir una aplicación al panel
+### 9.4 Bandeja del sistema (panel lateral)
 
-En `Dock.qml`, añade una línea a la lista `model` (todas terminan en coma menos la última):
+`Dock.qml` ya no es un lanzador con botones fijos: es la **bandeja del sistema**, como los iconos junto al reloj en Windows. Las aplicaciones se abren desde la terminal o con sus atajos (`Super + B`, `Super + D`...), y en el panel aparecen **solo las que siguen abiertas en segundo plano**.
+
+Cada aplicación se anuncia por sí misma a la bandeja (protocolo *StatusNotifierItem*) y Quickshell las recoge con su módulo `Quickshell.Services.SystemTray`: entran y salen solas, sin configurar nada.
+
+| Acción | Efecto |
+|---|---|
+| **Clic izquierdo** en un icono | Abre o muestra la aplicación |
+| **Clic derecho** en un icono | Aparece el botón **Cerrar**, que termina la aplicación del todo |
+| Ninguna app en la bandeja | El panel no se muestra |
+
+El panel queda en la esquina **inferior derecha**, con un pequeño margen con los bordes. Los iconos van en una caja redondeada; el resto de la franja es transparente y deja pasar los clics (`mask: Region { item: box }`).
 
 ```qml
-{ label: "Kt", cmd: ["kitty"] },
+Repeater {
+    model: SystemTray.items
+
+    delegate: MouseArea {
+        // clic izquierdo: modelData.activate()
+        // clic derecho: abre el panel con el botón "Cerrar"
+        IconImage { source: trayItem.modelData.icon }
+    }
+}
 ```
 
-El programa debe estar instalado.
+El fichero completo está en `.config/quickshell/Dock.qml`.
+
+> 💡 **Qué aplicaciones aparecen:** solo las que usan la bandeja. **Discord** sí (al cerrar su ventana se queda en segundo plano, con la opción de minimizar a la bandeja activada en sus ajustes). **Brave** no: se cierra con su propia **X** o con `Super + Retroceso`. **Steam** probablemente sí; **Plex** depende de la versión. Para probar el panel con una app pequeña: `sudo pacman -S --needed network-manager-applet` y `nm-applet --indicator &`.
+
+#### El botón "Cerrar": `trayquit.sh`
+
+La bandeja no dice qué proceso hay detrás de cada icono, pero cada icono se registra en **D-Bus**, que sí lo sabe. El script busca el icono por su identificador, obtiene su proceso y lo cierra: primero con `kill` y, si a los 2 segundos sigue vivo, con `kill -9`. Sirve para **cualquier** aplicación de la bandeja, sin depender de su nombre.
+
+`~/.config/quickshell/scripts/trayquit.sh`:
+
+```sh
+#!/bin/sh
+# Cierra del todo la aplicacion de un icono de la bandeja.
+# Uso: trayquit.sh ID    (sin ID, lista los iconos: id, pid y servicio)
+want="$1"
+w=org.kde.StatusNotifierWatcher
+bus=org.freedesktop.DBus
+items=$(busctl --user get-property $w /StatusNotifierWatcher $w RegisteredStatusNotifierItems 2>/dev/null)
+echo "$items" | grep -o '"[^"]*"' | tr -d '"' | while read -r entry; do
+    case "$entry" in
+        */*) svc=${entry%%/*}; path=/${entry#*/} ;;
+        *) svc=$entry; path=/StatusNotifierItem ;;
+    esac
+    id=$(busctl --user get-property "$svc" "$path" org.kde.StatusNotifierItem Id 2>/dev/null | cut -d'"' -f2)
+    pid=$(busctl --user call $bus /org/freedesktop/DBus $bus GetConnectionUnixProcessID s "$svc" 2>/dev/null | awk '{print $2}')
+    if [ -z "$want" ]; then
+        echo "id=$id pid=$pid servicio=$svc"
+    elif [ "$id" = "$want" ] && [ -n "$pid" ] && [ "$pid" -gt 1 ]; then
+        kill "$pid"
+        sleep 2
+        kill -0 "$pid" 2>/dev/null && kill -9 "$pid"
+    fi
+done
+```
+
+Pruébalo **sin argumentos**, con una aplicación en la bandeja (por ejemplo, Discord): solo lista, no cierra nada. Debe salir una línea por icono:
+
+```bash
+sh $HOME/.config/quickshell/scripts/trayquit.sh
+# id=discord_status_icon_1 pid=52582 servicio=:1.154
+```
+
+Con el `id` que muestre, cierra esa aplicación:
+
+```bash
+sh $HOME/.config/quickshell/scripts/trayquit.sh discord_status_icon_1
+```
+
+El botón **Cerrar** del panel lanza exactamente esa orden con el identificador del icono pulsado:
+
+```qml
+Quickshell.execDetached(["sh", "-c", "$HOME/.config/quickshell/scripts/trayquit.sh \"$0\"", trayItem.modelData.id])
+```
+
+> ⚠️ **El script debe ser ejecutable** (`chmod +x`), porque el botón lo lanza directamente. Un fichero creado con nano no lo es, y el clic en **Cerrar** no haría nada, aunque desde la terminal con `sh script` sí funcionara.
+
+> ⚠️ Es un cierre brusco, como "Finalizar tarea" en Windows: lo que la aplicación no haya guardado se pierde.
+
+> 💡 Para revisar la sintaxis del script sin ejecutarlo: `sh -n $HOME/.config/quickshell/scripts/trayquit.sh` (si no imprime nada, está bien).
 
 ### 9.5 Solución de problemas
 
@@ -526,13 +609,17 @@ Erratas reales encontradas al montar esta configuración:
 |---|---|---|
 | `module "QuickQuick" is not installed` | `import QuickQuick` | `import QtQuick` |
 | `module "Quicksell" is not installed` | `import Quicksell` (falta la `h`) | `import Quickshell` |
+| `module "Quickshell.Services.StstemTray" is not installed` | `StstemTray` por `SystemTray` | `import Quickshell.Services.SystemTray` |
 | `Wlrlayershell` no se reconoce | La `L` de `layer` en minúscula | `WlrLayershell` (QML distingue mayúsculas) |
 | `mondelData is not defined` | Letras cruzadas | `modelData` |
 | `Property 'execDetacged' ... is not a function` | Errata | `execDetached` |
+| `Property 'secondaryActive' ... is not a function` | Falta el final | `secondaryActivate()` |
 | `Repeat is not a type` | Falta el final | `Repeater` |
 | `Rectagle is not a type` | Falta una `n` | `Rectangle` |
 | `StudioCollector is not a type` | `Studio` por `Stdio` | `StdioCollector` |
-| `Expected token ':'` | `porperty` por `property` | `property` |
+| `Expected token ':'` | `porperty` por `property`, o `text. valor` con punto en vez de dos puntos | `property`; `text: valor` |
+| `Expected token ','` (en `acceptedButtons`) | Texto duplicado al pegar: `Qt.LeftButtons: Qt.LeftButton \| ...` | `acceptedButtons: Qt.LeftButton \| Qt.RightButton` |
+| `Cannot assign to non-existent property "margin"` | Falta la `s` | `anchors.margins` |
 | `Invalid property assignment: color expected` | Color sin almohadilla (`"89b4fa"`) | `"#89b4fa"` |
 | `Property 'strings' ... is not a function` | Nombre inventado | `substring` |
 | `panelWindth is not defined` | Errata | `panelWidth` |
@@ -540,6 +627,7 @@ Erratas reales encontradas al montar esta configuración:
 | `Vol undefined%` | La propiedad se declaró como `volPrecent` y se usa `volPercent` | Un único nombre en todo el fichero |
 | `Vol --` con audio funcionando | Falta el bloque `Process { id: volProc ... }` (`volProc is not defined`) | Añadir el bloque completo |
 | La rueda del volumen no hace nada | `"-1"` (número uno) en lugar de `"-l"` (letra ele) en `set-volume` | `"-l"` |
+| Un icono de la bandeja sale duplicado | Bloque `IconImage` repetido al pegar | Dejar uno solo |
 
 Y en los scripts de shell y en la terminal:
 
@@ -547,13 +635,17 @@ Y en los scripts de shell y en la terminal:
 |---|---|---|
 | `argument 'TYPE,' not understood` | Espacio tras la coma en `-f DEVICE, TYPE,STATE` | `-f DEVICE,TYPE,STATE` (sin espacios) |
 | `[: missing ']'` | Falta el espacio antes del corchete final | `[ -z "$dev" ]` |
+| `["$id" ...` no se reconoce | Falta el espacio tras `[` | `[ "$id" = "$want" ]` |
 | `Device 'dev' not found` | Falta el `$` | `"$dev"` |
 | El chip dice "Sin red" con conexión | El script no es ejecutable | `chmod +x` |
+| El botón **Cerrar** de la bandeja no cierra la app | `trayquit.sh` sin permiso de ejecución (se prueba bien con `sh script`, pero el botón lo lanza directamente) | `chmod +x $HOME/.config/quickshell/scripts/trayquit.sh` |
+| `trayquit.sh` no lista nada o falla | Orden partida en varias líneas, nombres mal escritos (`org.kde.StatusNotifierWatcher`), falta una `}` en `awk '{print $2}'` o un espacio en el patrón `'"[^"]*"'` | Revisar con `sh -n script`; cada orden en **una** línea |
 | `'@DEFAULT_AUDIO_SNIK@' is not a valid number` | `SNIK` por `SINK` | `@DEFAULT_AUDIO_SINK@` |
 | `'10%' is not a valid mute option` | `set-mute` con un porcentaje | `set-volume` para el volumen; `set-mute` solo admite `1`, `0` o `toggle` |
 | `no such option: nonmatch` (al abrir zsh) | Esa opción no existe | `unsetopt nomatch` (ver [12](#s12)) |
 | Hyprland no arranca solo tras el login | `-z "WAYLAND_DISPLAY"` sin `$` en `~/.zprofile` (compara texto literal, nunca vacío) | `-z "$WAYLAND_DISPLAY"` ([4.1](#41-arranque-automático-de-hyprland)) |
 | `unrecognized argument: --online` (git) | `--online` por `--oneline` | `git log --oneline` |
+| `cp: missing destination file operand` | Falta la segunda ruta (el destino) | `cp origen destino` |
 
 > 💡 Para ficheros largos, lo más seguro es reemplazarlos enteros ([apartado 6](#s6)) en lugar de retocar llaves a mano.
 
@@ -587,7 +679,7 @@ sh $HOME/.config/quickshell/scripts/net.sh
 > chmod +x $HOME/.config/quickshell/scripts/net.sh
 > ls -la $HOME/.config/quickshell/scripts/    # debe verse -rwxr-xr-x
 > ```
-> Git conserva este permiso al subir y clonar el repositorio.
+> Git conserva este permiso al subir y clonar el repositorio (se comprueba con `git ls-files -s`: debe salir `100755`).
 
 > 💡 El script no usa ningún nombre de interfaz: elige la primera conexión activa de tipo `ethernet` o `wifi`, así que sirve igual en la VM, en una torre y en un portátil.
 
@@ -805,29 +897,31 @@ PanelWindow {
 
 ### 9.10 Barra y panel transparentes (islas flotantes)
 
-En lugar de una franja entera, la barra y el panel lateral tienen la ventana **transparente**, y solo se ven los bloques redondeados (workspaces, reloj, volumen, red, botones) flotando sobre el fondo. Basta con cambiar el color de la ventana raíz:
+En lugar de una franja entera, la barra y el panel lateral tienen la ventana **transparente**, y solo se ven los bloques redondeados (workspaces, reloj, volumen, red, iconos de la bandeja) flotando sobre el fondo. Basta con cambiar el color de la ventana raíz:
 
 ```qml
 // Bar.qml y Dock.qml, en el PanelWindow
 color: "transparent"
 ```
 
-En `Dock.qml`, además: `implicitWidth: 30` y botones de 20 × 20. Para ajustar los chips, se les puede añadir un valor alfa al color, por ejemplo `#cc313244` (los dos primeros dígitos son la opacidad, de `00` a `ff`).
+Para ajustar los bloques, se les puede añadir un valor alfa al color, por ejemplo `#cc313244` (los dos primeros dígitos son la opacidad, de `00` a `ff`).
 
-> ⚠️ **Limitación conocida:** la ventana transparente sigue ocupando su franja entera: **reserva espacio** (las ventanas no llegan al borde) y **bloquea los clics** sobre lo que haya debajo. Se resuelve con una máscara de entrada que limite la zona sensible a los bloques (pendiente, [apartado 14](#s14)).
+> ⚠️ **Limitación conocida (barra superior):** la ventana transparente sigue ocupando su franja entera: **reserva espacio** (las ventanas no llegan al borde) y **bloquea los clics** sobre lo que haya debajo. Se resuelve con una máscara de entrada que limite la zona sensible a los bloques (pendiente, [apartado 14](#s14)).
+
+> 💡 **El panel lateral ya la tiene resuelta:** `mask: Region { item: box }` limita la zona que recibe clics a la caja de iconos, así que el resto de la franja transparente deja pasar los clics. La franja de 34 px sigue reservada a propósito, para que las ventanas no pasen por debajo de los iconos. La misma técnica servirá para la barra superior.
 
 ---
 
 <a id="s10"></a>
 ## 10. 📦 Programas instalados
 
-Los programas se instalan automáticamente con las listas de paquetes ([apartado 13](#s13)). Notas de uso:
+Los programas se instalan automáticamente con las listas de paquetes ([apartado 13](#s13)). Se abren desde la terminal o con sus atajos, y no desde el panel lateral. Notas de uso:
 
-| Programa | Cómo abrirlo |
-|---|---|
-| Kitty | `Super + Enter` |
-| Brave | `Super + B`, o el botón **Br** del panel |
-| Discord | `Super + D`, o el botón **Dc** del panel |
+| Programa | Cómo abrirlo | Nota |
+|---|---|---|
+| Kitty | `Super + Enter` | |
+| Brave | `Super + B` | No usa la bandeja: se cierra con su **X** o con `Super + Retroceso` |
+| Discord | `Super + D` | Al cerrar la ventana queda en la bandeja ([9.4](#94-bandeja-del-sistema-panel-lateral)); clic derecho → **Cerrar** lo termina del todo |
 
 > 💡 Desde una terminal, para abrir un programa sin dejarla ocupada: `discord & disown`.
 
@@ -885,6 +979,15 @@ cd PikSOn
 
 ### 11.5 Subir cambios
 
+Los ficheros de configuración que se editan en `~/.config` hay que **copiarlos al repositorio** antes de subirlos (cada uno con su origen y su destino):
+
+```bash
+cd $HOME/PikSOn
+cp $HOME/.config/quickshell/Bar.qml .config/quickshell/Bar.qml
+```
+
+Después:
+
 ```bash
 git pull --no-rebase --no-edit
 git add .
@@ -892,7 +995,9 @@ git commit -m "descripción del cambio"
 git push
 ```
 
-> 💡 Revisa siempre `git status` antes de hacer `git add .`.
+> 💡 Revisa siempre `git status` antes de hacer `git add .`: deben aparecer solo los ficheros que esperas, sin copias `.bak` ni nombres raros.
+
+> 💡 Los scripts nuevos deben conservar su permiso de ejecución: tras `git add .`, `git ls-files -s .config/quickshell/scripts` debe mostrar `100755` en todos.
 
 > ⚠️ **No copies nunca `~/.config` completo** al repositorio: contiene el token de GitHub (`gh`), datos del navegador y sesiones. Copia solo las carpetas que configures a propósito. Elimina antes las copias `.bak` (`rm -f ~/.config/quickshell/*.bak`).
 
@@ -967,6 +1072,14 @@ Consulta y controla el audio con PipeWire/WirePlumber:
 | `wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle` | Alterna el silencio |
 
 > 💡 Los nombres con arrobas (`@DEFAULT_AUDIO_SINK@`) conviene **copiarlos y pegarlos**: `SINK` se teclea mal con facilidad.
+
+### busctl
+
+Consulta el bus de mensajes del sistema (D-Bus). Lo usa `trayquit.sh` ([9.4](#94-bandeja-del-sistema-panel-lateral)) para averiguar qué aplicación hay detrás de cada icono de la bandeja; viene con systemd y no hace falta instalarlo:
+
+| Comando | Efecto |
+|---|---|
+| `busctl --user list` | Servicios activos en el bus de la sesión |
 
 ### zsh, plugins y starship
 
@@ -1060,7 +1173,7 @@ Pide la contraseña (no se ve al teclear). Para volver a bash: `chsh -s /bin/bas
 
 > 💡 El cambio de shell es **un ajuste del sistema** (`/etc/passwd`), no un fichero del repositorio: git no lo guarda ni lo restaura. Con el `.zshrc` se clona la configuración de zsh, pero **en cada equipo nuevo hay que repetir `chsh`**.
 
-> 💡 Hyprland, Quickshell y los scripts (`net.sh`, `netinfo.sh`) usan `/bin/sh`, **no** la shell del usuario: cambiar a zsh no les afecta.
+> 💡 Hyprland, Quickshell y los scripts (`net.sh`, `netinfo.sh`, `trayquit.sh`) usan `/bin/sh`, **no** la shell del usuario: cambiar a zsh no les afecta.
 
 > 💡 Si Inicio, Fin o Supr escriben símbolos raros, añade (con `>>`, dos signos, para no borrar el fichero):
 > ```bash
@@ -1100,7 +1213,7 @@ El fondo de pantalla viaja dentro de `.config/quickshell/` (`Wallpaper.qml` y `w
 
 Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1](#11-red-networkmanager)). Activa también el audio ([apartado 1.2](#12-audio-pipewire)): los paquetes de PipeWire llegan con `pkglist.txt`, pero sus servicios de usuario se activan con `systemctl --user enable --now pipewire pipewire-pulse wireplumber`.
 
-**Cambia la shell a zsh** (`chsh -s /usr/bin/zsh`; este ajuste **no viaja con el repositorio**) y **cierra la sesión del TTY** (`exit`) para iniciarla de nuevo: salir de Hyprland no basta ([apartado 12](#s12)). Con el `.zprofile` copiado, Hyprland arranca solo tras el login ([apartado 4.1](#41-arranque-automático-de-hyprland)); si no, entra con `start-hyprland`. La barra, el panel y el fondo arrancan solos.
+**Cambia la shell a zsh** (`chsh -s /usr/bin/zsh`; este ajuste **no viaja con el repositorio**) y **cierra la sesión del TTY** (`exit`) para iniciarla de nuevo: salir de Hyprland no basta ([apartado 12](#s12)). Con el `.zprofile` copiado, Hyprland arranca solo tras el login ([apartado 4.1](#41-arranque-automático-de-hyprland)); si no, entra con `start-hyprland`. La barra, la bandeja del sistema y el fondo arrancan solos; la bandeja solo se ve cuando hay alguna aplicación en segundo plano.
 
 | Fichero | Contenido |
 |---|---|
@@ -1125,7 +1238,7 @@ Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1
 
 - [x] Ajustar el hueco entre la barra superior y el panel lateral
 - [x] Workspaces en la barra
-- [x] Contenedor fijo para 10 workspaces
+- [x] Workspaces limitados a 5 (barra y atajos)
 - [x] Cambio a NetworkManager
 - [x] Chip de red en la barra (cable)
 - [x] Panel desplegable de red al pulsar el chip (IP, puerta de enlace, DNS, MAC, velocidad)
@@ -1139,23 +1252,42 @@ Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1
 - [x] Arranque automático de Hyprland tras el login (`~/.zprofile`)
 - [x] Cursor del ratón más pequeño (tamaño 16)
 - [x] Estructura del repositorio al principio del README y enlaces del índice corregidos
-- [ ] Máscara de entrada en la barra y el panel transparentes (que los huecos no bloqueen clics ni reserven espacio)
+- [x] Panel lateral como bandeja del sistema (solo apps en segundo plano), con botón para cerrarlas del todo (`trayquit.sh`)
+- [x] Máscara de entrada en el panel lateral (los huecos no bloquean clics)
+
+**Próximas mejoras de la barra**
+
+- [ ] Spotify en la barra: canción, controles y carátula
+- [ ] Calendario desplegable al pulsar el reloj
+- [ ] Tiempo (meteorología) en la barra
+- [ ] Panel de audio con salida y micrófono lado a lado, y silencio para cada uno
+- [ ] Panel de notificaciones con avisos emergentes e historial
+- [ ] Configuración de la resolución de pantalla
+- [ ] Gestor de pantalla para elegir resolución, frecuencia y escala del monitor físico (hardware real)
+
+**Escritorio**
+
+- [ ] Máscara de entrada en la barra superior (que los huecos no bloqueen clics ni reserven espacio)
 - [ ] Fondo de pantalla: la imagen no se ve centrada ni ocupando todo; revisar `hyprctl monitors` y `hyprctl layers`
 - [ ] Transparencia del resto de ventanas desde Hyprland, y bordes, esquinas redondeadas y desenfoque (el desenfoque es pesado en la VM)
-- [ ] Revisar el volumen: actualización instantánea al girar la rueda, y probar el silencio y el rango completo en hardware real (quizá un panel con barra deslizante)
-- [ ] Cerrar el panel de red al pulsar fuera
-- [ ] Pestañas Cable / Wi-Fi / Bluetooth en el panel
-- [ ] Probar el Wi-Fi y el Bluetooth en hardware real (`bluez`, `bluez-utils`)
-- [ ] Diseño radial del panel de red
-- [ ] Fusionar `net.sh` y `netinfo.sh` en un único script
-- [ ] Quitar el registro de depuración de la línea de arranque de Quickshell
-- [ ] Iconos reales en el panel lateral
 - [ ] Lanzador de aplicaciones
 - [ ] Gestor de archivos y diálogos de archivos de GTK (se ven mal en la VM)
 - [ ] Pantalla de bloqueo
-- [ ] Notificaciones
 - [ ] Paleta ANSI de 16 colores en kitty
-- [ ] Login gráfico en hardware real (SDDM, greetd con un greeter o uno propio con Quickshell), quitando el bloque de `~/.zprofile`
+
+**Barra y paneles**
+
+- [ ] Revisar el volumen: actualización instantánea al girar la rueda, y probar el silencio y el rango completo en hardware real
+- [ ] Cerrar los paneles al pulsar fuera
+- [ ] Pestañas Cable / Wi-Fi / Bluetooth en el panel de red, y diseño radial
+- [ ] Fusionar `net.sh` y `netinfo.sh` en un único script
+- [ ] Quitar el registro de depuración de la línea de arranque de Quickshell
+- [ ] Piezas nuevas: CPU y RAM, título de ventana activa y menú de apagado
+
+**Repositorio y hardware real**
+
 - [ ] GNU Stow para enlazar configuraciones (incluidos `zsh/.zshrc` y `zsh/.zprofile`)
 - [ ] Script `install.sh` que automatice este manual
 - [ ] Probar el manual completo en una VM limpia
+- [ ] Probar el Wi-Fi y el Bluetooth en hardware real (`bluez`, `bluez-utils`)
+- [ ] Login gráfico en hardware real (SDDM, greetd con un greeter o uno propio con Quickshell), quitando el bloque de `~/.zprofile`
