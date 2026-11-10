@@ -15,7 +15,7 @@ PikSOn/
 │   └── .zprofile            # Arranque automático de Hyprland (se copia a ~/.zprofile)
 └── .config/                 # Configuraciones (se copian a ~/.config)
     ├── hypr/
-    │   └── hyprland.lua     # Hyprland: atajos, cursor, terminal y arranque automático
+    │   └── hyprland.lua     # Hyprland: monitor, atajos, cursor, terminal y arranque automático
     ├── kitty/
     │   └── kitty.conf       # Terminal: tipografía, colores y transparencia
     └── quickshell/
@@ -24,6 +24,7 @@ PikSOn/
         ├── wallpaper.jpg    # Imagen del fondo
         ├── Bar.qml          # Barra superior (5 workspaces, música, reloj, volumen, chip y panel de red)
         ├── Player.qml       # Chip de música de la barra (cualquier reproductor MPRIS)
+        ├── Calendar.qml     # Calendario desplegable del reloj
         ├── Dock.qml         # Panel lateral: bandeja del sistema (apps en segundo plano)
         └── scripts/
             ├── net.sh       # Resumen de red para el chip (debe ser ejecutable)
@@ -38,9 +39,9 @@ PikSOn/
 | `aur-pkglist.txt` | Paquetes del AUR, generada con `pacman -Qqem` |
 | `zsh/.zshrc` | Shell zsh con plugins y starship |
 | `zsh/.zprofile` | Lanza Hyprland al iniciar sesión en el TTY1 |
-| `.config/hypr/` | Configuración de Hyprland, incluidos los atajos y el cursor |
+| `.config/hypr/` | Configuración de Hyprland, incluidos el monitor, los atajos y el cursor |
 | `.config/kitty/` | Configuración del terminal |
-| `.config/quickshell/` | Barra superior, chip de música, bandeja del sistema, fondo y scripts de apoyo |
+| `.config/quickshell/` | Barra superior, chip de música, calendario, bandeja del sistema, fondo y scripts de apoyo |
 
 > 💡 Las carpetas de `.config/` replican la ruta que tendrían en `~/.config`. `zsh/` está fuera porque `.zshrc` y `.zprofile` viven en la carpeta personal; con GNU Stow se enlazarán automáticamente.
 
@@ -132,6 +133,28 @@ wpctl get-volume @DEFAULT_AUDIO_SINK@         # Volume: 0.40
 
 > 💡 En una VM, con la máquina **apagada**, habilita el audio en *Configuración → Audio → Habilitar audio* (controlador Intel HD Audio). Sin tarjeta de sonido virtual, el chip mostrará `Vol --`.
 
+### 1.3 Zona horaria y hora
+
+Tras `archinstall`, la zona horaria puede quedar en **UTC**, y el reloj de la barra marcaría una hora menos (en España, en invierno) o dos (en verano). Se comprueba y se corrige con `timedatectl`:
+
+```bash
+timedatectl
+sudo timedatectl set-timezone Europe/Madrid
+sudo timedatectl set-ntp true     # recomendado en hardware real
+```
+
+| Línea de `timedatectl` | Debe decir |
+|---|---|
+| `Time zone` | `Europe/Madrid (CET, +0100)` (o `CEST, +0200` en verano) |
+| `System clock synchronized` | `yes` |
+| `RTC in local TZ` | `no` |
+
+Quickshell lee la zona horaria al arrancar: tras cambiarla, reinícialo (`pkill qs` y vuelve a lanzar `qs`), o cierra sesión y vuelve a entrar.
+
+> 💡 Es un ajuste **del sistema**, no un fichero del repositorio: git no lo guarda, y hay que repetirlo en cada equipo nuevo (como `chsh`, [apartado 12](#s12)).
+
+> 💡 `set-ntp true` activa la sincronización automática con internet, para que el reloj no se desajuste. En una VM no hace falta, porque VirtualBox ya sincroniza la hora con la del anfitrión.
+
 ---
 
 <a id="s2"></a>
@@ -175,6 +198,8 @@ sudo systemctl enable --now vboxservice
 > 💡 Los diálogos de archivos de GTK (por ejemplo, "Guardar como" en Brave) pueden verse mal en la VM: lista de la raíz del sistema aunque la ruta indique otra carpeta, nombres cortados y botones que no responden. Si no se puede guardar, descarga con `curl` ([9.9](#99-fondo-de-pantalla)).
 
 > 💡 **Spotify de escritorio no dibuja su ventana en la VM** (el proceso arranca, pero no aparece ventana ni se anuncia): es una limitación de la máquina virtual sin GPU. Ver [9.11](#911-chip-de-música-en-la-barra) para cómo se prueba el chip de música sin él.
+
+> 💡 **La pantalla de la VM solo ofrece 60 Hz** (VirtualBox no expone otras frecuencias), aunque el monitor real vaya a más. Y la escala automática de Hyprland sale demasiado alta (1,67) y recorta las aplicaciones: ver [el apartado 8](#otros-ajustes-de-hyprlandlua-monitor-escala-y-frecuencia).
 
 ---
 
@@ -282,7 +307,7 @@ fc-list | grep -i jetbrains     # el nombre de familia va entre los dos puntos
 ```conf
 # tipografia
 font_family     JetBrainsMono Nerd Font Mono
-font_size       8.0
+font_size       10.0
 
 # aspecto
 background_opacity      0.5
@@ -309,9 +334,11 @@ Abre una terminal nueva (`Super + Enter`) o recarga la actual con **`Ctrl + Shif
 | `foreground` | Color del **texto** |
 | `background` | Color del **relleno** de la ventana |
 | `background_opacity` | Transparencia: `1.0` opaco, `0.5` mitad, valores menores = más transparente |
-| `font_size` | Tamaño de letra (8 = compacto) |
+| `font_size` | Tamaño de letra (10 con la escala 1,25 del monitor) |
 
-> 💡 **Probar en caliente** (temporal, no toca el fichero): `Ctrl + Shift + +` / `-` cambian el tamaño de letra, y `Ctrl + Shift + A` seguido de `L` (más transparente), `M` (menos) o `D` (valor del fichero) cambian la opacidad.
+> 💡 **El tamaño de letra depende de la escala del monitor** ([apartado 8](#otros-ajustes-de-hyprlandlua-monitor-escala-y-frecuencia)): con la escala 1,25 queda bien con **10**; con la escala automática de 1,67 hacía falta 8. Si cambias la escala, ajusta el tamaño de letra (el equivalente es `tamaño × escala anterior ÷ escala nueva`).
+
+> 💡 **Probar en caliente** (temporal, no toca el fichero): `Ctrl + Shift + +` / `-` cambian el tamaño de letra, `Ctrl + Shift + Retroceso` vuelve al valor del fichero, y `Ctrl + Shift + A` seguido de `L` (más transparente), `M` (menos) o `D` (valor del fichero) cambian la opacidad.
 
 > 💡 Si no se ve el color elegido, suele ser la transparencia: con `background_opacity 0.5` la imagen de fondo domina. Sube el valor a 0.8 para que el color del terminal se note.
 
@@ -319,7 +346,9 @@ Abre una terminal nueva (`Super + Enter`) o recarga la actual con **`Ctrl + Shif
 
 > 💡 La paleta ANSI de 16 colores (`color0` ... `color15`, los que usan `ls`, `git` o los mensajes de error) no está definida: kitty usa la suya por defecto. Se puede añadir más adelante, o moverla a un fichero aparte y cargarla con `include`.
 
-> 💡 Si el resultado de `kitty` muestra errores de configuración: `kitty --debug-config 2>&1 | head -20`.
+> 💡 Para ver la configuración que kitty está aplicando y sus errores: **`Ctrl + Shift + F6`** dentro de una terminal de kitty (la opción de línea de órdenes `kitty --debug-config` ya no existe en kitty 0.49).
+
+> 💡 Al abrir o reajustar ventanas, kitty muestra un instante el tamaño de la ventana en celdas (`233 by 48 cells`). Es inofensivo; no se ha encontrado una opción para ocultarlo.
 
 ---
 
@@ -347,6 +376,8 @@ Uso básico: `Ctrl+O` guarda, `Ctrl+X` sale y `Ctrl+W` busca.
 > ⚠️ Pega **solo el contenido del fichero**. Las líneas `cat > fichero <<'EOF'` y `EOF` son parte de otro método (escribir desde la terminal) y **no deben pegarse dentro de nano**: `EOF` quedaría escrito en el fichero y lo rompería.
 
 > 💡 Para ficheros largos, pegar es más fiable que teclear: las erratas de teclear a mano (letras que faltan o sobran, espacios, líneas partidas) son la causa de casi todos los fallos de la tabla del [apartado 9.5](#95-solución-de-problemas).
+
+> 💡 Para **pegar desde fuera de la VM**, el portapapeles compartido de VirtualBox (*Dispositivos → Portapapeles compartido → Bidireccional*) puede no funcionar con Hyprland (Wayland). Alternativa fiable: abrir el manual en Brave **dentro** de la VM y copiar desde allí.
 
 > ⚠️ Si editas un fichero **por fuera** (con `sed`, por ejemplo) mientras sigue abierto en nano, el aviso **Modified** indica que nano tiene su propia copia sin guardar: al guardar desde nano, **sobrescribirá** el cambio externo. Cierra nano antes, o corrige dentro de nano (`Ctrl + \` busca y reemplaza).
 
@@ -438,12 +469,41 @@ echo "tema=[$XCURSOR_THEME] tamaño=[$XCURSOR_SIZE]"     # tamaño=[16]
 
 > 💡 Algunas aplicaciones GTK (como Brave) pueden conservar su propio tamaño de cursor; se ajusta aparte en la configuración de GTK.
 
+### Otros ajustes de `hyprland.lua`: monitor, escala y frecuencia
+
+El monitor se configura en el bloque `hl.monitor` (al principio de `hyprland.lua`, en la sección `MONITORS`):
+
+```lua
+hl.monitor({
+    output   = "",
+    mode     = "preferred",
+    position = "auto",
+    scale    = "1.25",
+})
+```
+
+Con `scale = "auto"`, en la VM Hyprland elige **1,67** (no conoce el tamaño físico de la pantalla). Con una pantalla de 1920 × 955, eso deja unos **1152 × 573 píxeles útiles**, y las aplicaciones con tamaño mínimo se recortan: Discord (≈ 940 × 500) y Brave pierden el borde derecho o el panel de usuario de abajo a la izquierda, y el fondo puede verse descentrado. Por eso la escala se fija a mano:
+
+| Escala | Píxeles útiles (1920 × 955) | Resultado |
+|---|---|---|
+| `1.67` (automática en la VM) | 1152 × 573 | Todo grande, pero las apps no caben |
+| **`1.25`** (la que se usa) | 1536 × 764 | Todo cabe y se lee bien |
+| `1` | 1920 × 955 | Todo cabe, pero el texto es muy pequeño |
+
+Comprueba la escala y la resolución con `hyprctl monitors` (líneas `scale:` y la primera, con `@`). Hyprland recarga la configuración al guardar; si no, `hyprctl reload`.
+
+> 💡 Al cambiar la escala hay que **reajustar el tamaño de letra** del terminal ([5.2](#52-configuración-propia-kittyconf)): con 1,25 se usa 10.
+
+> 💡 **Frecuencia (Hz):** la VM solo ofrece **60 Hz** (VirtualBox no expone más), así que la de un monitor de 165 Hz solo se puede usar en **hardware real**. Allí se fija en `mode`: `mode = "1920x1080@165"`, o `mode = "highrr"` para que Hyprland elija la frecuencia más alta. Con `"preferred"`, muchos monitores se quedan en 60 Hz. En un equipo real, revisa también la escala: Hyprland suele acertar solo con ella, al conocer el tamaño físico.
+
+> 💡 **Discord necesita ≈ 940 px de ancho:** en pantalla dividida (≈ 750 px por mitad con la escala 1,25) puede recortarse por la derecha. Se resuelve con la distribución de las ventanas (por ejemplo, Discord a pantalla completa en su propio workspace), no con la escala.
+
 ---
 
 <a id="s9"></a>
 ## 9. 🧩 Quickshell: barra, panel lateral y fondo
 
-**Quickshell** es un kit para construir la interfaz del escritorio (barras, paneles, widgets) con QML. Aquí se usa para una barra superior (con un chip de música), un panel lateral que hace de **bandeja del sistema** (las aplicaciones que siguen abiertas en segundo plano) y el fondo de pantalla.
+**Quickshell** es un kit para construir la interfaz del escritorio (barras, paneles, widgets) con QML. Aquí se usa para una barra superior (con un chip de música y un reloj con calendario), un panel lateral que hace de **bandeja del sistema** (las aplicaciones que siguen abiertas en segundo plano) y el fondo de pantalla.
 
 ### 9.1 Instalación
 
@@ -461,8 +521,9 @@ La configuración vive en `~/.config/quickshell/` y se divide en piezas:
 | `shell.qml` | Punto de entrada: carga las demás piezas |
 | `Wallpaper.qml` | Fondo de pantalla (una ventana en la capa `Background`) |
 | `wallpaper.jpg` | La imagen del fondo |
-| `Bar.qml` | Barra superior: contenedor fijo de 5 workspaces, chip de música, reloj, chips de volumen y de red y panel desplegable de red |
+| `Bar.qml` | Barra superior: contenedor fijo de 5 workspaces, chip de música, reloj (con calendario desplegable), chips de volumen y de red y panel desplegable de red |
 | `Player.qml` | Chip de música de la barra: canción que suena y botones anterior, pausa y siguiente ([9.11](#911-chip-de-música-en-la-barra)) |
+| `Calendar.qml` | Calendario desplegable que se abre al pulsar el reloj ([9.12](#912-calendario-del-reloj)) |
 | `Dock.qml` | Panel lateral derecho = **bandeja del sistema**: muestra solo las apps que siguen abiertas en segundo plano ([9.4](#94-bandeja-del-sistema-panel-lateral)) |
 | `scripts/net.sh` | Resumen de la red para el chip (`tipo\|dispositivo\|ip`) |
 | `scripts/netinfo.sh` | Detalle de la red para el panel desplegable (`clave=valor`) |
@@ -606,7 +667,8 @@ Si al editar un `.qml` aparece la ventana **"Config reload failed"**:
 - Si el mismo error se repite tras editar, probablemente **el fichero no ha cambiado**: comprueba su contenido con `head -3` o `cat -n fichero | sed -n '30,52p'`.
 - Los avisos amarillos (`WARN ... ReferenceError`, `TypeError`) no impiden cargar, pero señalan una errata que rompe una función. Se ven con `qs log`.
 - Cuando el aviso dice **"is not a type"**, compara letra por letra con una línea idéntica que sí funcione: `Stdio` y `Studio`, o `Rectangle` y `Rectagle`, se parecen demasiado a simple vista.
-- Un fichero `.qml` que ninguna pieza usa todavía **no se comprueba**: sus erratas solo aparecen cuando otro fichero lo carga (por ejemplo, `Player.qml` hasta que `Bar.qml` incluye `Player {}`).
+- Un fichero `.qml` que ninguna pieza usa todavía **no se comprueba**: sus erratas solo aparecen cuando otro fichero lo carga (por ejemplo, `Player.qml` hasta que `Bar.qml` incluye `Player {}`, o `Calendar.qml` hasta que `Bar.qml` incluye `Calendar {}`).
+- Al **añadir** una línea con nano, comprueba que no **sustituyes** la que había (por ejemplo, al añadir `calOpen` se perdió `netOpen`).
 
 Erratas reales encontradas al montar esta configuración:
 
@@ -626,6 +688,7 @@ Erratas reales encontradas al montar esta configuración:
 | `Incomplete binding, expected ':' or '{'` | Propiedad sin los dos puntos: `anchors.left.wsBox.right` | `anchors.left: wsBox.right` |
 | `Expected token ','` (en `acceptedButtons`) | Texto duplicado al pegar: `Qt.LeftButtons: Qt.LeftButton \| ...` | `acceptedButtons: Qt.LeftButton \| Qt.RightButton` |
 | `Cannot assign to non-existent property "margin"` | Falta la `s` | `anchors.margins` |
+| `Cannot assign to non-existent property "onNetOpenChanged"` | Se borró `property bool netOpen: false` al añadir `calOpen` | Deben existir **las dos** propiedades |
 | `Invalid property assignment: color expected` | Color sin almohadilla (`"89b4fa"`) | `"#89b4fa"` |
 | `Property 'strings' ... is not a function` | Nombre inventado | `substring` |
 | `ReferenceError: i2 is not defined` | Se usa una variable que no se declaró (`i2` por `i1`) | El nombre declarado |
@@ -639,6 +702,7 @@ Erratas reales encontradas al montar esta configuración:
 | Un botón del chip de música sale como un cuadro vacío | Código de icono mal escrito (`"\uf4b"` por `"\uf04b"`) | Cuatro cifras tras `\u` |
 | El chip de música sigue mostrando el texto largo | La etiqueta no usa la función | `text: chip.shortText()` |
 | `impicitWidth` no existe | Falta una `l` | `implicitWidth` |
+| Al pulsar en **cualquier sitio** de la barra se abre el calendario, y los chips dejan de responder | El `MouseArea` del reloj quedó **fuera** del `Text` (con `anchors.fill: parent` cubre toda la barra) | Colocarlo **dentro** del `Text` del reloj, antes de su `}` |
 
 Y en los scripts de shell y en la terminal:
 
@@ -658,6 +722,11 @@ Y en los scripts de shell y en la terminal:
 | `unrecognized argument: --online` (git) | `--online` por `--oneline` | `git log --oneline` |
 | `cp: missing destination file operand` | Falta la segunda ruta (el destino) | `cp origen destino` |
 | `playerctl` dice `No players found` con música sonando | El reproductor no se anuncia por MPRIS (o aún no ha iniciado sesión) | Probar con otro (Brave con un vídeo); ver [9.11](#911-chip-de-música-en-la-barra) |
+| `Unknown flag: --debug-config` (kitty) | Esa opción ya no existe en kitty 0.49 | `Ctrl + Shift + F6` dentro de kitty |
+| `zsh: command not found: man` | `man` no viene instalado | `sudo pacman -S --needed man-db` |
+| Discord se queda en «Starting...» con la ventana negra | Procesos a medias de pruebas anteriores, o sesión inestable | Cerrar todo (`hyprctl clients` da el `pid`; `kill`) y reiniciar el equipo |
+| La hora de la barra va una hora atrasada | Zona horaria del sistema en UTC | `sudo timedatectl set-timezone Europe/Madrid` ([1.3](#13-zona-horaria-y-hora)) |
+| Discord o Brave se recortan (falta el panel de usuario, el borde derecho...) | Escala del monitor demasiado alta (1,67 en la VM) | `scale = "1.25"` en `hl.monitor` ([apartado 8](#otros-ajustes-de-hyprlandlua-monitor-escala-y-frecuencia)) |
 
 > 💡 Para ficheros largos, lo más seguro es reemplazarlos enteros ([apartado 6](#s6)) en lugar de retocar llaves a mano.
 
@@ -1097,6 +1166,265 @@ Rectangle {
 
 > 💡 **Spotify web** (`open.spotify.com` en Brave) también se anuncia por MPRIS, pero necesita **Widevine** activado en `brave://settings/extensions` para reproducir.
 
+### 9.12 Calendario del reloj
+
+Al **pulsar el reloj** del centro de la barra se despliega, justo debajo y centrado, un **calendario del mes**: con el día de hoy resaltado y flechas para cambiar de mes y de año. Un segundo clic en el reloj lo cierra. Se construye en QML puro, con las fechas de JavaScript, sin instalar nada.
+
+| Elemento | Efecto |
+|---|---|
+| `«` y `»` | Año anterior y siguiente |
+| `‹` y `›` | Mes anterior y siguiente |
+| Título (mes y año) | Al pulsarlo, vuelve al mes actual |
+| Fila `L M X J V S D` | Los días de la semana, empezando en **lunes** |
+| Día de hoy | Resaltado en azul (solo si el mes mostrado es el actual) |
+| Segundo clic en el reloj | Cierra el calendario (todavía no se cierra al pulsar fuera) |
+
+`~/.config/quickshell/Calendar.qml`:
+
+```qml
+import Quickshell
+import QtQuick
+
+PopupWindow {
+    id: cal
+
+    property date shown: new Date()
+    property date today: new Date()
+    readonly property var monthNames: ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
+    readonly property var dayNames: ["L", "M", "X", "J", "V", "S", "D"]
+    readonly property int firstOffset: (new Date(shown.getFullYear(), shown.getMonth(), 1).getDay() + 6) % 7
+    readonly property int daysInMonth: new Date(shown.getFullYear(), shown.getMonth() + 1, 0).getDate()
+
+    function shift(n) {
+        shown = new Date(shown.getFullYear(), shown.getMonth() + n, 1)
+    }
+
+    onVisibleChanged: {
+        if (visible) {
+            today = new Date()
+            shown = new Date()
+        }
+    }
+
+    implicitWidth: 232
+    implicitHeight: content.implicitHeight + 20
+    color: "transparent"
+
+    Rectangle {
+        anchors.fill: parent
+        radius: 8
+        color: "#f2313244"
+        border.color: "#45475a"
+        border.width: 1
+
+        Column {
+            id: content
+            anchors.top: parent.top
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.margins: 10
+            spacing: 6
+
+            Row {
+                Item {
+                    width: 28
+                    height: 26
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "\uf100"
+                        color: "#cdd6f4"
+                        font.family: "JetBrainsMono Nerd Font"
+                        font.pixelSize: 12
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: cal.shift(-12)
+                    }
+                }
+
+                Item {
+                    width: 28
+                    height: 26
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "\uf104"
+                        color: "#cdd6f4"
+                        font.family: "JetBrainsMono Nerd Font"
+                        font.pixelSize: 12
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: cal.shift(-1)
+                    }
+                }
+
+                Item {
+                    width: 100
+                    height: 26
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: cal.monthNames[cal.shown.getMonth()] + " " + cal.shown.getFullYear()
+                        color: "#cdd6f4"
+                        font.pixelSize: 12
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: cal.shown = new Date()
+                    }
+                }
+
+                Item {
+                    width: 28
+                    height: 26
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "\uf105"
+                        color: "#cdd6f4"
+                        font.family: "JetBrainsMono Nerd Font"
+                        font.pixelSize: 12
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: cal.shift(1)
+                    }
+                }
+
+                Item {
+                    width: 28
+                    height: 26
+
+                    Text {
+                        anchors.centerIn: parent
+                        text: "\uf101"
+                        color: "#cdd6f4"
+                        font.family: "JetBrainsMono Nerd Font"
+                        font.pixelSize: 12
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: cal.shift(12)
+                    }
+                }
+            }
+
+            Row {
+                Repeater {
+                    model: cal.dayNames
+
+                    delegate: Item {
+                        required property string modelData
+
+                        width: 30
+                        height: 20
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: parent.modelData
+                            color: "#a6adc8"
+                            font.pixelSize: 11
+                        }
+                    }
+                }
+            }
+
+            Grid {
+                columns: 7
+
+                Repeater {
+                    model: 42
+
+                    delegate: Item {
+                        id: cell
+                        required property int index
+
+                        readonly property int day: index - cal.firstOffset + 1
+                        readonly property bool valid: day >= 1 && day <= cal.daysInMonth
+                        readonly property bool isToday: valid && day === cal.today.getDate() && cal.shown.getMonth() === cal.today.getMonth() && cal.shown.getFullYear() === cal.today.getFullYear()
+
+                        width: 30
+                        height: 26
+
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 24
+                            height: 24
+                            radius: 6
+                            color: cell.isToday ? "#89b4fa" : "transparent"
+                        }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: cell.valid ? cell.day : ""
+                            color: cell.isToday ? "#1e1e2e" : "#cdd6f4"
+                            font.pixelSize: 12
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+Se engancha al reloj con **tres inserciones en `Bar.qml`**:
+
+**1.** Junto a `netOpen`, la propiedad que abre y cierra el calendario (**las dos deben existir**):
+
+```qml
+property bool netOpen: false
+property bool calOpen: false
+```
+
+**2.** Dentro del `Text` del reloj (el que usa `Qt.formatDateTime(clock.date, ...)`), antes de su llave de cierre, el clic:
+
+```qml
+Text {
+    anchors.centerIn: parent
+    color: "#cdd6f4"
+    font.pixelSize: 15
+    text: Qt.formatDateTime(clock.date, "ddd d MMM HH:mm:ss")
+
+    MouseArea {
+        anchors.fill: parent
+        onClicked: root.calOpen = !root.calOpen
+    }
+}
+```
+
+**3.** Justo después del `Text` del reloj, **fuera** de él, el calendario, centrado bajo la barra:
+
+```qml
+Calendar {
+    anchor.window: root
+    anchor.rect.x: (root.width - implicitWidth) / 2
+    anchor.rect.y: root.height + 4
+    visible: root.calOpen
+}
+```
+
+| Pieza | Función |
+|---|---|
+| `shown` | El mes que se está viendo; `shift(n)` lo mueve `n` meses |
+| `firstOffset` | Día de la semana en que empieza el mes, con el lunes como 0: `(getDay() + 6) % 7` |
+| `daysInMonth` | Días del mes (28 a 31), con `new Date(año, mes + 1, 0).getDate()` |
+| Cuadrícula de 42 casillas | 6 filas × 7 días; las que no son del mes quedan en blanco |
+| `onVisibleChanged` | Al abrir, vuelve al mes actual y refresca la fecha de hoy |
+
+> ⚠️ **El `MouseArea` va dentro del `Text` del reloj.** Si queda fuera, su `anchors.fill: parent` cubre **toda la barra**: cualquier clic abre el calendario y los chips de volumen y de red dejan de responder.
+
+> 💡 La hora de la barra sale del reloj del sistema: si va atrasada, ver [1.3](#13-zona-horaria-y-hora).
+
+> 💡 Colores y fuente son los mismos que los del resto de la barra; quedan pendientes del tema común ([apartado 14](#s14)).
+
 ---
 
 <a id="s10"></a>
@@ -1108,7 +1436,7 @@ Los programas se instalan automáticamente con las listas de paquetes ([apartado
 |---|---|---|
 | Kitty | `Super + Enter` | |
 | Brave | `Super + B` | No usa la bandeja: se cierra con su **X** o con `Super + Retroceso`. Lo que reproduce (YouTube, por ejemplo) aparece en el chip de música |
-| Discord | `Super + D` | Al cerrar la ventana queda en la bandeja ([9.4](#94-bandeja-del-sistema-panel-lateral)); clic derecho → **Cerrar** lo termina del todo |
+| Discord | `Super + D` | Al cerrar la ventana queda en la bandeja ([9.4](#94-bandeja-del-sistema-panel-lateral)); clic derecho → **Cerrar** lo termina del todo. Necesita ≈ 940 px de ancho: en pantalla dividida puede recortarse ([apartado 8](#otros-ajustes-de-hyprlandlua-monitor-escala-y-frecuencia)) |
 
 > 💡 Desde una terminal, para abrir un programa sin dejarla ocupada: `discord & disown`.
 
@@ -1210,7 +1538,7 @@ git push
 
 > 💡 Si se sube un fichero por error (por ejemplo, `pklist.txt` por teclear mal `pkglist.txt`), se retira con `git rm -f fichero` y un nuevo `commit` y `push`. Git conserva el historial, así que nada se pierde.
 
-> 💡 Ajustes del sistema, como la shell por defecto (`chsh`), **no** son ficheros del repositorio: git no los guarda. Se documentan en el README y se repiten en cada equipo.
+> 💡 Ajustes del sistema, como la shell por defecto (`chsh`) o la zona horaria (`timedatectl`), **no** son ficheros del repositorio: git no los guarda. Se documentan en el README y se repiten en cada equipo.
 
 ---
 
@@ -1283,6 +1611,17 @@ sudo pacman -S --needed playerctl
 | `playerctl status` | `Playing`, `Paused` o `Stopped` |
 | `playerctl metadata --format '{{artist}} - {{title}}'` | Artista y título de lo que suena |
 | `playerctl play-pause`, `next`, `previous` | Controles |
+
+### hyprctl
+
+Consulta y controla Hyprland en marcha:
+
+| Comando | Efecto |
+|---|---|
+| `hyprctl monitors` | Resolución, frecuencia, **escala** y modos disponibles de cada monitor |
+| `hyprctl clients` | Las ventanas abiertas: clase, tamaño, posición, `pid` y si usan XWayland |
+| `hyprctl layers` | Las capas de Quickshell (barra, panel, fondo) |
+| `hyprctl reload` | Recarga la configuración |
 
 ### zsh, plugins y starship
 
@@ -1414,9 +1753,9 @@ cp zsh/.zprofile $HOME/.zprofile      # opcional: arranque automático de Hyprla
 
 El fondo de pantalla viaja dentro de `.config/quickshell/` (`Wallpaper.qml` y `wallpaper.jpg`).
 
-Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1](#11-red-networkmanager)). Activa también el audio ([apartado 1.2](#12-audio-pipewire)): los paquetes de PipeWire llegan con `pkglist.txt`, pero sus servicios de usuario se activan con `systemctl --user enable --now pipewire pipewire-pulse wireplumber`.
+Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1](#11-red-networkmanager)). Activa también el audio ([apartado 1.2](#12-audio-pipewire)): los paquetes de PipeWire llegan con `pkglist.txt`, pero sus servicios de usuario se activan con `systemctl --user enable --now pipewire pipewire-pulse wireplumber`. Ajusta la **zona horaria** ([1.3](#13-zona-horaria-y-hora)), que tampoco viaja con el repositorio.
 
-**Cambia la shell a zsh** (`chsh -s /usr/bin/zsh`; este ajuste **no viaja con el repositorio**) y **cierra la sesión del TTY** (`exit`) para iniciarla de nuevo: salir de Hyprland no basta ([apartado 12](#s12)). Con el `.zprofile` copiado, Hyprland arranca solo tras el login ([apartado 4.1](#41-arranque-automático-de-hyprland)); si no, entra con `start-hyprland`. La barra (con el chip de música), la bandeja del sistema y el fondo arrancan solos; la bandeja solo se ve cuando hay alguna aplicación en segundo plano, y el chip de música cuando hay algo sonando.
+**Cambia la shell a zsh** (`chsh -s /usr/bin/zsh`; este ajuste **no viaja con el repositorio**) y **cierra la sesión del TTY** (`exit`) para iniciarla de nuevo: salir de Hyprland no basta ([apartado 12](#s12)). Con el `.zprofile` copiado, Hyprland arranca solo tras el login ([apartado 4.1](#41-arranque-automático-de-hyprland)); si no, entra con `start-hyprland`. La barra (con el chip de música y el calendario), la bandeja del sistema y el fondo arrancan solos; la bandeja solo se ve cuando hay alguna aplicación en segundo plano, y el chip de música cuando hay algo sonando.
 
 | Fichero | Contenido |
 |---|---|
@@ -1426,7 +1765,7 @@ Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1
 | `zsh/.zshrc` | Configuración de zsh (se copia a `~/.zshrc`) |
 | `zsh/.zprofile` | Arranque automático de Hyprland en el TTY1 (se copia a `~/.zprofile`) |
 
-> ⚠️ Requiere `yay` instalado ([apartado 7](#s7)). Las listas incluyen `virtualbox-guest-utils`, que solo hace falta en una VM: retíralo en hardware real. En hardware real, quita también `LIBGL_ALWAYS_SOFTWARE=1` de `hyprland.lua` (terminal y Quickshell).
+> ⚠️ Requiere `yay` instalado ([apartado 7](#s7)). Las listas incluyen `virtualbox-guest-utils`, que solo hace falta en una VM: retíralo en hardware real. En hardware real, quita también `LIBGL_ALWAYS_SOFTWARE=1` de `hyprland.lua` (terminal y Quickshell), y revisa la **escala** y la **frecuencia** del monitor ([apartado 8](#otros-ajustes-de-hyprlandlua-monitor-escala-y-frecuencia)): la escala `1.25` y el tamaño de letra de kitty en `10` están ajustados a la VM.
 
 > 💡 Cada vez que instales algo nuevo, regenera las listas. Cuidado con el nombre: es `pkglist.txt` (con **g**); un `pklist.txt` crearía un fichero nuevo y distinto.
 > ```bash
@@ -1439,21 +1778,29 @@ Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1
 <a id="s14"></a>
 ## 14. 📝 Pendiente
 
+**Lo primero al retomar: el diseño visual**
+
+- [ ] Decidir la estética de **todo lo implementado** y centralizarla en un tema común (idealmente un único fichero, `Theme.qml`, que importen la barra, el chip de música, el calendario y la bandeja):
+  - Tamaños de la barra, la bandeja, los chips, los márgenes y las separaciones
+  - Una sola fuente (Nerd Font monoespaciada) y los tamaños de letra de cada pieza
+  - Una paleta de colores única, hoy repartida entre los tonos de la barra y el gris cálido del terminal
+  - Bordes, esquinas, sombras, transparencias y desenfoque, también los de las ventanas desde Hyprland
+
 **Próximas mejoras de la barra**
 
-- [ ] Chip de música: carátula, barra de progreso y panel desplegable; probar Spotify de escritorio en hardware real
-- [ ] Calendario desplegable al pulsar el reloj
+- [ ] Volumen con **panel desplegable**: al pulsar el chip, una barra con un círculo que se arrastra al valor deseado, con el porcentaje, el botón de silenciar y el cierre al pulsar fuera (hoy se cambia con la rueda del ratón)
+- [ ] Chip de música simplificado: en la barra, solo canción y artista; al pulsarlo, un panel con el título completo, los controles (anterior, pausa y siguiente), el botón de bucle (no repetir, repetir canción o repetir lista) y la carátula o el icono de la fuente (Spotify, YouTube...)
+- [ ] Calendario interactivo (tipo Apple Calendar o Notion): pulsar un día y añadir eventos, etiquetas y tareas pendientes; hay que decidir dónde se guardan los datos (fichero local o sincronizado con un servicio)
 - [ ] Tiempo (meteorología) en la barra
 - [ ] Panel de audio con salida y micrófono lado a lado, y silencio para cada uno
 - [ ] Panel de notificaciones con avisos emergentes e historial
-- [ ] Configuración de la resolución de pantalla
 - [ ] Gestor de pantalla para elegir resolución, frecuencia y escala del monitor físico (hardware real)
-- [ ] Tema común: una misma fuente y paleta de colores para la barra, la bandeja, el chip de música y el terminal
 
 **Escritorio**
 
 - [ ] Máscara de entrada en la barra superior (que los huecos no bloqueen clics ni reserven espacio)
-- [ ] Fondo de pantalla: la imagen no se ve centrada ni ocupando todo; revisar `hyprctl monitors` y `hyprctl layers`
+- [ ] Fondo de pantalla: comprobar si ya queda centrado tras ajustar la escala; si no, revisar `hyprctl monitors` y `hyprctl layers`
+- [ ] Distribución de las ventanas: Discord necesita ≈ 940 px de ancho; decidir entre Discord a pantalla completa en su propio workspace o una distribución con una ventana más ancha
 - [ ] Transparencia del resto de ventanas desde Hyprland, y bordes, esquinas redondeadas y desenfoque (el desenfoque es pesado en la VM)
 - [ ] Lanzador de aplicaciones
 - [ ] Gestor de archivos y diálogos de archivos de GTK (se ven mal en la VM)
@@ -1462,8 +1809,7 @@ Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1
 
 **Barra y paneles**
 
-- [ ] Revisar el volumen: actualización instantánea al girar la rueda, y probar el silencio y el rango completo en hardware real
-- [ ] Cerrar los paneles al pulsar fuera
+- [ ] Cerrar los paneles al pulsar fuera (red, calendario y los que vengan)
 - [ ] Pestañas Cable / Wi-Fi / Bluetooth en el panel de red, y diseño radial
 - [ ] Fusionar `net.sh` y `netinfo.sh` en un único script
 - [ ] Quitar el registro de depuración de la línea de arranque de Quickshell
@@ -1471,8 +1817,10 @@ Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1
 
 **Repositorio y hardware real**
 
+- [ ] Instalar Spotify de escritorio y probarlo (en la VM no dibuja ventana); el chip de música ya lo reconocerá
+- [ ] Frecuencia del monitor (165 Hz) y revisión de la escala del monitor
+- [ ] Probar el Wi-Fi y el Bluetooth (`bluez`, `bluez-utils`), y revisar el volumen y el silencio con el rango completo
 - [ ] GNU Stow para enlazar configuraciones (incluidos `zsh/.zshrc` y `zsh/.zprofile`)
 - [ ] Script `install.sh` que automatice este manual
 - [ ] Probar el manual completo en una VM limpia
-- [ ] Probar el Wi-Fi y el Bluetooth en hardware real (`bluez`, `bluez-utils`)
-- [ ] Login gráfico en hardware real (SDDM, greetd con un greeter o uno propio con Quickshell), quitando el bloque de `~/.zprofile`
+- [ ] Login gráfico (SDDM, greetd con un greeter o uno propio con Quickshell), quitando el bloque de `~/.zprofile`
