@@ -35,8 +35,8 @@ Rectangle {
 	visible: player !== null
 	height: 28
 	width: row.implicitWidth + 20
-	radius: 8
-	color: "#cc313244"
+	radius: Theme.radius
+	color: Theme.bgChip
 
 	Row {
 		id: row
@@ -50,8 +50,8 @@ Rectangle {
 			Text {
 				anchors.centerIn: parent
 				text: "\uf048"
-				color: "#cdd6f4"
-				font.family: "JetBrainsMono Nerd Font"
+				color: Theme.fg
+				font.family: Theme.fontIcons
 				font.pixelSize: 12
 			}
 		
@@ -68,8 +68,8 @@ Rectangle {
 			Text {
 				anchors.centerIn: parent
 				text: chip.player && chip.player.isPlaying ? "\uf04c" : "\uf04b"
-				color: "#cdd6f4"
-				font.family: "JetBrainsMono Nerd Font"
+				color: Theme.fg
+				font.family: Theme.fontIcons
 				font.pixelSize: 12
 			}
 
@@ -86,8 +86,8 @@ Rectangle {
 			Text {
 				anchors.centerIn: parent
 				text: "\uf051"
-				color: "#cdd6f4"
-				font.family: "JetBrainsMono Nerd Font"
+				color: Theme.fg
+				font.family: Theme.fontIcons
 				font.pixelSize: 12
 			}
 		
@@ -106,7 +106,7 @@ Rectangle {
 				anchors.verticalCenter: parent.verticalCenter
 				width: parent.width
 				elide: Text.ElideRight
-				color: "#cdd6f4"
+				color: Theme.fg
 				font.pixelSize: 12
 				text: chip.shortText()
 			}

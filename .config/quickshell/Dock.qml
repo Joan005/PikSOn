@@ -25,8 +25,8 @@ PanelWindow {
 		anchors.bottomMargin: 8
 		width: 30
 		height: col.implicitHeight + 12
-		radius: 8
-		color: "#cc313244"
+		radius: Theme.radius
+		color: Theme.bgChip
 
 		Column {
 			id: col
@@ -86,9 +86,9 @@ PanelWindow {
 				
 				Rectangle {
 					anchors.fill: parent
-					radius: 8
-					color: "#f2313244"
-					border.color: "#45475a"
+					radius: Theme.radius
+					color: Theme.bgPopup
+					border.color: Theme.line
 					border.width: 1
 				
 				Column {
@@ -106,15 +106,15 @@ PanelWindow {
 
 							width: menuCol.width
 							height: modelData.isSeparator ? 5: 26
-							radius: 5
-							color: (!modelData.isSeparator && entryMouse.containsMouse) ? "#45475a" : "transparent"
+							radius: Theme.radiusSmall
+							color: (!modelData.isSeparator && entryMouse.containsMouse) ? Theme.accent2 : "transparent"
 
 						Rectangle {
 							visible: entry.modelData.isSeparator
 							anchors.centerIn: parent
 							width: parent.width - 8
 							height: 1
-							color: "#585b70"
+							color: Theme.line
 						}
 						
 						Text {
@@ -123,7 +123,7 @@ PanelWindow {
 							anchors.left: parent.left
 							anchors.leftMargin: 8
 							text: entry.modelData.text
-							color: entry.modelData.enabled ? "#cdd6f4" : "#6c7086"
+							color: entry.modelData.enabled ? Theme.fg : Theme.fgMuted
 							font.pixelSize: 12
 						}
 							

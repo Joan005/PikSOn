@@ -139,8 +139,8 @@ PanelWindow {
 		anchors.verticalCenter: parent.verticalCenter
 		width: slots * cell + (slots -1) * gap + 2 * pad
 		height: 23
-		radius: 7
-		color: "#181825"
+		radius: Theme.radius
+		color: Theme.bgChip
 	
 		Row {
 			anchors.left:parent.left
@@ -155,14 +155,14 @@ PanelWindow {
 				Rectangle {
 					width: 24
 					height: 19
-					radius: 5
-					color: modelData.focused ? "#89b4fa" : "#313244"	
+					radius: Theme.radius
+					color: modelData.focused ? Theme.accent : Theme.bgCell	
 				
 
 				Text {
 					anchors.centerIn: parent
 					text: modelData.id
-					color: modelData.focused ? "#1e1e2e" : "#cdd6f4"
+					color: modelData.focused ? Theme.fgOnAccent : Theme.fg
 				}
 
 				MouseArea {
@@ -176,7 +176,7 @@ PanelWindow {
 
 	Text {
 		anchors.centerIn: parent
-		color: "#cdd6f4"
+		color: Theme.fg
 		font.pixelSize: 15
 		text: Qt.formatDateTime(clock.date, "ddd d MMM HH:mm:ss")
 	
@@ -200,13 +200,13 @@ PanelWindow {
 		anchors.verticalCenter: parent.verticalCenter
 		width: netText.implicitWidth + 16
 		height: 19
-		radius: 5
-		color: root.netType === "none" ? "#45475a" : "#313244"
+		radius: Theme.radius
+		color: root.netType === "none" ? Theme.bgCell : Theme.bgChip
 	
 		Text {
 			id: netText
 			anchors.centerIn: parent
-			color: "#cdd6f4"
+			color: Theme.fg
 			font.pixelSize: 12
 			text: root.netType === "none"
 				? "Sin red"
@@ -226,13 +226,13 @@ PanelWindow {
 		anchors.verticalCenter: parent.verticalCenter
 		width: volText.implicitWidth + 16
 		height: 19
-		radius: 5
-		color: (root.volMuted || root.volPercent < 0) ? "#45475a" : "#313244"
+		radius: Theme.radius
+		color: (root.volMuted || root.volPercent < 0) ? Theme.bgCell : Theme.bgChip
 
 		Text {
 			id: volText
 			anchors.centerIn: parent
-			color: "#cdd6f4"
+			color: Theme.fg
 			font.pixelSize: 12
 			text: root.volPercent < 0
 				? "Vol --"
@@ -269,9 +269,9 @@ PanelWindow {
 
 		Rectangle {
 			anchors.fill: parent
-			radius: 10
-			color: "#1e1e2e"
-			border.color: "#313244"
+			radius: Theme.radius
+			color: Theme.bgPopup
+			border.color: Theme.line
 			border.width: 1
 		
 		Column {
@@ -281,7 +281,7 @@ PanelWindow {
 
 			Text {
 				text: root.info.estado === "ok" ? "Red . " + root.info.tipo : "Sin Conexion"
-				color: "#89b4fa"
+				color: Theme.accent
 				font.pixelSize: 15
 				font.bold: true
 			}
@@ -303,13 +303,13 @@ PanelWindow {
 					Text {
 						width: 120
 						text: modelData.k
-						color: "#a6adc8"
+						color: Theme.fgMuted
 						font.pixelSize: 12
 					}
 			
 					Text {
 						text: modelData.v ? modelData.v : "-"
-						color: "#cdd6f4"
+						color: Theme.fg
 						font.pixelSize: 12
 					}
 				}

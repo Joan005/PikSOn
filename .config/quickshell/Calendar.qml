@@ -28,9 +28,9 @@ PopupWindow {
 
     Rectangle {
         anchors.fill: parent
-        radius: 8
-        color: "#f2313244"
-        border.color: "#45475a"
+        radius: Theme.radius
+        color: Theme.bgPopup
+        border.color: Theme.line
         border.width: 1
 
         Column {
@@ -49,8 +49,8 @@ PopupWindow {
                     Text {
                         anchors.centerIn: parent
                         text: "\uf100"
-                        color: "#cdd6f4"
-                        font.family: "JetBrainsMono Nerd Font"
+                        color: Theme.fg
+                        font.family: Theme.fontIcons
                         font.pixelSize: 12
                     }
 
@@ -67,8 +67,8 @@ PopupWindow {
                     Text {
                         anchors.centerIn: parent
                         text: "\uf104"
-                        color: "#cdd6f4"
-                        font.family: "JetBrainsMono Nerd Font"
+                        color: Theme.fg
+                        font.family: Theme.fontIcons
                         font.pixelSize: 12
                     }
 
@@ -85,7 +85,7 @@ PopupWindow {
                     Text {
                         anchors.centerIn: parent
                         text: cal.monthNames[cal.shown.getMonth()] + " " + cal.shown.getFullYear()
-                        color: "#cdd6f4"
+                        color: Theme.fg
                         font.pixelSize: 12
                     }
 
@@ -102,8 +102,8 @@ PopupWindow {
                     Text {
                         anchors.centerIn: parent
                         text: "\uf105"
-                        color: "#cdd6f4"
-                        font.family: "JetBrainsMono Nerd Font"
+                        color: Theme.fg
+                        font.family: Theme.fontIcons
                         font.pixelSize: 12
                     }
 
@@ -120,8 +120,8 @@ PopupWindow {
                     Text {
                         anchors.centerIn: parent
                         text: "\uf101"
-                        color: "#cdd6f4"
-                        font.family: "JetBrainsMono Nerd Font"
+                        color: Theme.fg
+                        font.family: Theme.fontIcons
                         font.pixelSize: 12
                     }
 
@@ -145,7 +145,7 @@ PopupWindow {
                         Text {
                             anchors.centerIn: parent
                             text: parent.modelData
-                            color: "#a6adc8"
+                            color: Theme.fgMuted
                             font.pixelSize: 11
                         }
                     }
@@ -173,14 +173,14 @@ PopupWindow {
                             anchors.centerIn: parent
                             width: 24
                             height: 24
-                            radius: 6
-                            color: cell.isToday ? "#89b4fa" : "transparent"
+                            radius: Theme.radiusSmall
+                            color: cell.isToday ? Theme.accent : "transparent"
                         }
 
                         Text {
                             anchors.centerIn: parent
                             text: cell.valid ? cell.day : ""
-                            color: cell.isToday ? "#1e1e2e" : "#cdd6f4"
+                            color: cell.isToday ? Theme.fgOnAccent : Theme.fg
                             font.pixelSize: 12
                         }
                     }
