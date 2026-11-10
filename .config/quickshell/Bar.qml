@@ -19,6 +19,8 @@ PanelWindow {
 	property string netIp: ""
 
 	//DETALLE PAR AEL PANEL (NET.SH)
+	
+	property bool calOpen: false
 	property bool netOpen: false
 	property var info: ({})
 
@@ -177,6 +179,18 @@ PanelWindow {
 		color: "#cdd6f4"
 		font.pixelSize: 15
 		text: Qt.formatDateTime(clock.date, "ddd d MMM HH:mm:ss")
+	
+	
+		MouseArea {
+		anchors.fill: parent
+		onClicked: root.calOpen = !root.calOpen
+		}
+	}
+	Calendar {
+	anchor.window: root
+	anchor.rect.x: (root.width - implicitWidth) / 2
+	anchor.rect.y: root.height + 4
+	visible: root.calOpen
 	}
 	
 	Rectangle {
