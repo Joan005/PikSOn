@@ -22,7 +22,8 @@ PikSOn/
         ├── shell.qml        # Punto de entrada
         ├── Wallpaper.qml    # Fondo de pantalla
         ├── wallpaper.jpg    # Imagen del fondo
-        ├── Bar.qml          # Barra superior (5 workspaces, reloj, volumen, chip y panel de red)
+        ├── Bar.qml          # Barra superior (5 workspaces, música, reloj, volumen, chip y panel de red)
+        ├── Player.qml       # Chip de música de la barra (cualquier reproductor MPRIS)
         ├── Dock.qml         # Panel lateral: bandeja del sistema (apps en segundo plano)
         └── scripts/
             ├── net.sh       # Resumen de red para el chip (debe ser ejecutable)
@@ -39,7 +40,7 @@ PikSOn/
 | `zsh/.zprofile` | Lanza Hyprland al iniciar sesión en el TTY1 |
 | `.config/hypr/` | Configuración de Hyprland, incluidos los atajos y el cursor |
 | `.config/kitty/` | Configuración del terminal |
-| `.config/quickshell/` | Barra superior, bandeja del sistema, fondo y scripts de apoyo |
+| `.config/quickshell/` | Barra superior, chip de música, bandeja del sistema, fondo y scripts de apoyo |
 
 > 💡 Las carpetas de `.config/` replican la ruta que tendrían en `~/.config`. `zsh/` está fuera porque `.zshrc` y `.zprofile` viven en la carpeta personal; con GNU Stow se enlazarán automáticamente.
 
@@ -172,6 +173,8 @@ sudo systemctl enable --now vboxservice
 > 💡 El audio virtual de VirtualBox tiene límites (volumen mínimo ≈ 45 % y silencio sin efecto): ver [9.8](#98-chip-de-volumen-en-la-barra).
 
 > 💡 Los diálogos de archivos de GTK (por ejemplo, "Guardar como" en Brave) pueden verse mal en la VM: lista de la raíz del sistema aunque la ruta indique otra carpeta, nombres cortados y botones que no responden. Si no se puede guardar, descarga con `curl` ([9.9](#99-fondo-de-pantalla)).
+
+> 💡 **Spotify de escritorio no dibuja su ventana en la VM** (el proceso arranca, pero no aparece ventana ni se anuncia): es una limitación de la máquina virtual sin GPU. Ver [9.11](#911-chip-de-música-en-la-barra) para cómo se prueba el chip de música sin él.
 
 ---
 
@@ -440,7 +443,7 @@ echo "tema=[$XCURSOR_THEME] tamaño=[$XCURSOR_SIZE]"     # tamaño=[16]
 <a id="s9"></a>
 ## 9. 🧩 Quickshell: barra, panel lateral y fondo
 
-**Quickshell** es un kit para construir la interfaz del escritorio (barras, paneles, widgets) con QML. Aquí se usa para una barra superior, un panel lateral que hace de **bandeja del sistema** (las aplicaciones que siguen abiertas en segundo plano) y el fondo de pantalla.
+**Quickshell** es un kit para construir la interfaz del escritorio (barras, paneles, widgets) con QML. Aquí se usa para una barra superior (con un chip de música), un panel lateral que hace de **bandeja del sistema** (las aplicaciones que siguen abiertas en segundo plano) y el fondo de pantalla.
 
 ### 9.1 Instalación
 
@@ -458,7 +461,8 @@ La configuración vive en `~/.config/quickshell/` y se divide en piezas:
 | `shell.qml` | Punto de entrada: carga las demás piezas |
 | `Wallpaper.qml` | Fondo de pantalla (una ventana en la capa `Background`) |
 | `wallpaper.jpg` | La imagen del fondo |
-| `Bar.qml` | Barra superior: contenedor fijo de 5 workspaces, reloj, chips de volumen y de red y panel desplegable de red |
+| `Bar.qml` | Barra superior: contenedor fijo de 5 workspaces, chip de música, reloj, chips de volumen y de red y panel desplegable de red |
+| `Player.qml` | Chip de música de la barra: canción que suena y botones anterior, pausa y siguiente ([9.11](#911-chip-de-música-en-la-barra)) |
 | `Dock.qml` | Panel lateral derecho = **bandeja del sistema**: muestra solo las apps que siguen abiertas en segundo plano ([9.4](#94-bandeja-del-sistema-panel-lateral)) |
 | `scripts/net.sh` | Resumen de la red para el chip (`tipo\|dispositivo\|ip`) |
 | `scripts/netinfo.sh` | Detalle de la red para el panel desplegable (`clave=valor`) |
@@ -488,7 +492,7 @@ Quickshell **recarga solo** al guardar un fichero. Si hay un error, aparece una 
 
 > 💡 Los recuadros numerados de la izquierda de la barra son los **workspaces** (escritorios virtuales) de Hyprland. Solo hay **5**; un clic sobre el número cambia de escritorio.
 
-> 💡 Los workspaces van dentro de un **contenedor oscuro de anchura fija** (152 px), calculada para 5 recuadros: `5 × 24 px + 4 × 5 px de separación + 12 px de margen interior`. Así el espacio queda reservado aunque solo exista un workspace, y las piezas que se añadan a su derecha no se desplazan. El número de recuadros es la propiedad **`slots`** de `wsBox` en `Bar.qml` (`cell` es el tamaño de cada recuadro y `gap` la separación): al cambiarla, el contenedor se recalcula solo. Para anclar otra pieza junto a él, se usa `anchors.left: wsBox.right`.
+> 💡 Los workspaces van dentro de un **contenedor oscuro de anchura fija** (152 px), calculada para 5 recuadros: `5 × 24 px + 4 × 5 px de separación + 12 px de margen interior`. Así el espacio queda reservado aunque solo exista un workspace, y las piezas que se añadan a su derecha no se desplazan. El número de recuadros es la propiedad **`slots`** de `wsBox` en `Bar.qml` (`cell` es el tamaño de cada recuadro y `gap` la separación): al cambiarla, el contenedor se recalcula solo. Para anclar otra pieza junto a él, se usa `anchors.left: wsBox.right` (así está colocado el chip de música).
 
 > 💡 El panel lateral (`Dock.qml`) está anclado arriba, a la derecha y abajo: así reserva una franja de 34 px y las ventanas no pasan por debajo de los iconos. Quickshell ya descuenta el espacio de la barra superior, por lo que no hace falta ningún margen manual arriba.
 
@@ -602,6 +606,7 @@ Si al editar un `.qml` aparece la ventana **"Config reload failed"**:
 - Si el mismo error se repite tras editar, probablemente **el fichero no ha cambiado**: comprueba su contenido con `head -3` o `cat -n fichero | sed -n '30,52p'`.
 - Los avisos amarillos (`WARN ... ReferenceError`, `TypeError`) no impiden cargar, pero señalan una errata que rompe una función. Se ven con `qs log`.
 - Cuando el aviso dice **"is not a type"**, compara letra por letra con una línea idéntica que sí funcione: `Stdio` y `Studio`, o `Rectangle` y `Rectagle`, se parecen demasiado a simple vista.
+- Un fichero `.qml` que ninguna pieza usa todavía **no se comprueba**: sus erratas solo aparecen cuando otro fichero lo carga (por ejemplo, `Player.qml` hasta que `Bar.qml` incluye `Player {}`).
 
 Erratas reales encontradas al montar esta configuración:
 
@@ -617,17 +622,23 @@ Erratas reales encontradas al montar esta configuración:
 | `Repeat is not a type` | Falta el final | `Repeater` |
 | `Rectagle is not a type` | Falta una `n` | `Rectangle` |
 | `StudioCollector is not a type` | `Studio` por `Stdio` | `StdioCollector` |
-| `Expected token ':'` | `porperty` por `property`, o `text. valor` con punto en vez de dos puntos | `property`; `text: valor` |
+| `Expected token ':'` | `porperty` por `property`, o `text. valor` con punto en vez de dos puntos, o `Text:` en vez de `Text {` | `property`; `text: valor`; `Text {` |
+| `Incomplete binding, expected ':' or '{'` | Propiedad sin los dos puntos: `anchors.left.wsBox.right` | `anchors.left: wsBox.right` |
 | `Expected token ','` (en `acceptedButtons`) | Texto duplicado al pegar: `Qt.LeftButtons: Qt.LeftButton \| ...` | `acceptedButtons: Qt.LeftButton \| Qt.RightButton` |
 | `Cannot assign to non-existent property "margin"` | Falta la `s` | `anchors.margins` |
 | `Invalid property assignment: color expected` | Color sin almohadilla (`"89b4fa"`) | `"#89b4fa"` |
 | `Property 'strings' ... is not a function` | Nombre inventado | `substring` |
+| `ReferenceError: i2 is not defined` | Se usa una variable que no se declaró (`i2` por `i1`) | El nombre declarado |
 | `panelWindth is not defined` | Errata | `panelWidth` |
 | Un panel que no se coloca bajo el chip | Consecuencia del error anterior | Corregir la errata |
 | `Vol undefined%` | La propiedad se declaró como `volPrecent` y se usa `volPercent` | Un único nombre en todo el fichero |
 | `Vol --` con audio funcionando | Falta el bloque `Process { id: volProc ... }` (`volProc is not defined`) | Añadir el bloque completo |
 | La rueda del volumen no hace nada | `"-1"` (número uno) en lugar de `"-l"` (letra ele) en `set-volume` | `"-l"` |
 | Un icono de la bandeja sale duplicado | Bloque `IconImage` repetido al pegar | Dejar uno solo |
+| El chip de música no se coloca junto a los workspaces | El bloque `Player {}` quedó **dentro** del `Rectangle` del `wsBox` | Ponerlo fuera, justo encima, al mismo nivel |
+| Un botón del chip de música sale como un cuadro vacío | Código de icono mal escrito (`"\uf4b"` por `"\uf04b"`) | Cuatro cifras tras `\u` |
+| El chip de música sigue mostrando el texto largo | La etiqueta no usa la función | `text: chip.shortText()` |
+| `impicitWidth` no existe | Falta una `l` | `implicitWidth` |
 
 Y en los scripts de shell y en la terminal:
 
@@ -646,6 +657,7 @@ Y en los scripts de shell y en la terminal:
 | Hyprland no arranca solo tras el login | `-z "WAYLAND_DISPLAY"` sin `$` en `~/.zprofile` (compara texto literal, nunca vacío) | `-z "$WAYLAND_DISPLAY"` ([4.1](#41-arranque-automático-de-hyprland)) |
 | `unrecognized argument: --online` (git) | `--online` por `--oneline` | `git log --oneline` |
 | `cp: missing destination file operand` | Falta la segunda ruta (el destino) | `cp origen destino` |
+| `playerctl` dice `No players found` con música sonando | El reproductor no se anuncia por MPRIS (o aún no ha iniciado sesión) | Probar con otro (Brave con un vídeo); ver [9.11](#911-chip-de-música-en-la-barra) |
 
 > 💡 Para ficheros largos, lo más seguro es reemplazarlos enteros ([apartado 6](#s6)) en lugar de retocar llaves a mano.
 
@@ -897,7 +909,7 @@ PanelWindow {
 
 ### 9.10 Barra y panel transparentes (islas flotantes)
 
-En lugar de una franja entera, la barra y el panel lateral tienen la ventana **transparente**, y solo se ven los bloques redondeados (workspaces, reloj, volumen, red, iconos de la bandeja) flotando sobre el fondo. Basta con cambiar el color de la ventana raíz:
+En lugar de una franja entera, la barra y el panel lateral tienen la ventana **transparente**, y solo se ven los bloques redondeados (workspaces, música, reloj, volumen, red, iconos de la bandeja) flotando sobre el fondo. Basta con cambiar el color de la ventana raíz:
 
 ```qml
 // Bar.qml y Dock.qml, en el PanelWindow
@@ -910,6 +922,181 @@ Para ajustar los bloques, se les puede añadir un valor alfa al color, por ejemp
 
 > 💡 **El panel lateral ya la tiene resuelta:** `mask: Region { item: box }` limita la zona que recibe clics a la caja de iconos, así que el resto de la franja transparente deja pasar los clics. La franja de 34 px sigue reservada a propósito, para que las ventanas no pasen por debajo de los iconos. La misma técnica servirá para la barra superior.
 
+### 9.11 Chip de música en la barra
+
+A la derecha de los workspaces aparece un chip con lo que suena ahora, por ejemplo **`Andrea Bocelli - Con Te Partirò / Time To Say Goodbye`**, y tres botones. Funciona con **cualquier reproductor** que se anuncie por **MPRIS**, el estándar con el que los reproductores avisan al sistema de lo que reproducen: Spotify, VLC, mpv o el propio navegador (Brave anuncia los vídeos de YouTube).
+
+| Elemento | Efecto |
+|---|---|
+| Primer botón | Canción anterior |
+| Segundo botón | Pausa o reproducir (el icono cambia según el estado) |
+| Tercer botón | Canción siguiente |
+| Texto | «Canción - Artista», recortado a 180 px con `...` |
+| Sin reproductor | El chip no se muestra |
+
+**Qué reproductor elige:** `Spotify` si está abierto; si no, el que esté sonando; si no, el primero de la lista.
+
+**Cómo se recorta el texto:** se quita lo que va entre paréntesis (`(Live From ...)`), y solo se añade el artista si el título aún no lleva un guion. Los vídeos de YouTube ya traen «Artista - Canción» en el título, y su «artista» es el nombre del canal, por lo que no se añade.
+
+**Comprobar que el reproductor se anuncia**, con `playerctl` ([apartado 12](#s12)) y algo sonando:
+
+```bash
+playerctl -l                                            # brave.instance46441
+playerctl status                                        # Playing
+playerctl metadata --format '{{artist}} - {{title}}'
+```
+
+`~/.config/quickshell/Player.qml`:
+
+```qml
+import Quickshell.Services.Mpris
+import QtQuick
+
+Rectangle {
+    id: chip
+
+    function pickPlayer() {
+        var list = Mpris.players.values
+        var pick = null
+        for (var i = 0; i < list.length; i++) {
+            var p = list[i]
+            if (p.identity === "Spotify")
+                return p
+            if (pick === null || (p.isPlaying && !pick.isPlaying))
+                pick = p
+        }
+        return pick
+    }
+
+    function shortText() {
+        if (!chip.player)
+            return ""
+        var t = chip.player.trackTitle || ""
+        var a = chip.player.trackArtist || ""
+        var i1 = t.indexOf("(")
+        if (i1 > 0)
+            t = t.substring(0, i1).trim()
+        if (a !== "" && t.indexOf(" - ") < 0)
+            return t + " - " + a
+        return t
+    }
+
+    readonly property var player: pickPlayer()
+
+    visible: player !== null
+    height: 28
+    width: row.implicitWidth + 20
+    radius: 8
+    color: "#cc313244"
+
+    Row {
+        id: row
+        anchors.centerIn: parent
+        spacing: 4
+
+        Item {
+            width: 22
+            height: 28
+
+            Text {
+                anchors.centerIn: parent
+                text: "\uf048"
+                color: "#cdd6f4"
+                font.family: "JetBrainsMono Nerd Font"
+                font.pixelSize: 12
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: if (chip.player) chip.player.previous()
+            }
+        }
+
+        Item {
+            width: 22
+            height: 28
+
+            Text {
+                anchors.centerIn: parent
+                text: chip.player && chip.player.isPlaying ? "\uf04c" : "\uf04b"
+                color: "#cdd6f4"
+                font.family: "JetBrainsMono Nerd Font"
+                font.pixelSize: 12
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: if (chip.player) chip.player.togglePlaying()
+            }
+        }
+
+        Item {
+            width: 22
+            height: 28
+
+            Text {
+                anchors.centerIn: parent
+                text: "\uf051"
+                color: "#cdd6f4"
+                font.family: "JetBrainsMono Nerd Font"
+                font.pixelSize: 12
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: if (chip.player) chip.player.next()
+            }
+        }
+
+        Item {
+            width: Math.min(label.implicitWidth, 180)
+            height: 28
+
+            Text {
+                id: label
+                anchors.verticalCenter: parent.verticalCenter
+                width: parent.width
+                elide: Text.ElideRight
+                color: "#cdd6f4"
+                font.pixelSize: 12
+                text: chip.shortText()
+            }
+        }
+    }
+}
+```
+
+Se coloca en `Bar.qml` **fuera** del `Rectangle` del `wsBox` y justo **encima** de él, al mismo nivel:
+
+```qml
+Player {
+    anchors.left: wsBox.right
+    anchors.leftMargin: 8
+    anchors.verticalCenter: wsBox.verticalCenter
+}
+
+Rectangle {
+    id: wsBox
+    // ...
+}
+```
+
+| Pieza | Función |
+|---|---|
+| `Mpris.players` | La lista de reproductores que se anuncian (módulo `Quickshell.Services.Mpris`) |
+| `pickPlayer()` | Elige el reproductor, con preferencia por Spotify |
+| `shortText()` | Compone el texto corto |
+| `visible: player !== null` | Muestra el chip solo si hay reproductor |
+| `"\uf048"`, `"\uf04b"`, `"\uf04c"`, `"\uf051"` | Iconos de anterior, reproducir, pausa y siguiente (fuente Nerd Font) |
+
+> 💡 El chip usa la misma fuente y paleta que el resto de la barra. Si algún día se unifica el tema, bastará con cambiar los colores (`#cc313244` y `#cdd6f4`) y la fuente de este fichero.
+
+> 💡 Los títulos con corchetes (`[Official Video]`) no se recortan: solo se recorta lo que va entre paréntesis.
+
+> ⚠️ **Spotify de escritorio en la VM:** el cliente (instalado con `sudo pacman -S spotify-launcher`) arranca, pero **no dibuja ventana ni se anuncia por MPRIS**, ni con `LIBGL_ALWAYS_SOFTWARE=1` ni con `--disable-gpu`; es una limitación de la máquina virtual sin GPU. El chip se prueba con **Brave** (un vídeo de YouTube) y debería reconocer a Spotify en hardware real. Cuidado con `spotify-launcher -- --opcion`: las opciones tras `--` se toman como una dirección (`--uri=`) y no se aplican.
+
+> 💡 **Spotify web** (`open.spotify.com` en Brave) también se anuncia por MPRIS, pero necesita **Widevine** activado en `brave://settings/extensions` para reproducir.
+
 ---
 
 <a id="s10"></a>
@@ -920,7 +1107,7 @@ Los programas se instalan automáticamente con las listas de paquetes ([apartado
 | Programa | Cómo abrirlo | Nota |
 |---|---|---|
 | Kitty | `Super + Enter` | |
-| Brave | `Super + B` | No usa la bandeja: se cierra con su **X** o con `Super + Retroceso` |
+| Brave | `Super + B` | No usa la bandeja: se cierra con su **X** o con `Super + Retroceso`. Lo que reproduce (YouTube, por ejemplo) aparece en el chip de música |
 | Discord | `Super + D` | Al cerrar la ventana queda en la bandeja ([9.4](#94-bandeja-del-sistema-panel-lateral)); clic derecho → **Cerrar** lo termina del todo |
 
 > 💡 Desde una terminal, para abrir un programa sin dejarla ocupada: `discord & disown`.
@@ -1080,6 +1267,22 @@ Consulta el bus de mensajes del sistema (D-Bus). Lo usa `trayquit.sh` ([9.4](#94
 | Comando | Efecto |
 |---|---|
 | `busctl --user list` | Servicios activos en el bus de la sesión |
+| `busctl --user list \| grep -i mpris` | Reproductores que se anuncian por MPRIS |
+
+### playerctl
+
+Consulta y controla los reproductores que se anuncian por MPRIS (Brave, Spotify, VLC...). Es la herramienta que sirve para comprobar que un reproductor llegará al chip de música ([9.11](#911-chip-de-música-en-la-barra)):
+
+```bash
+sudo pacman -S --needed playerctl
+```
+
+| Comando | Efecto |
+|---|---|
+| `playerctl -l` | Lista los reproductores disponibles (`No players found` si ninguno se anuncia) |
+| `playerctl status` | `Playing`, `Paused` o `Stopped` |
+| `playerctl metadata --format '{{artist}} - {{title}}'` | Artista y título de lo que suena |
+| `playerctl play-pause`, `next`, `previous` | Controles |
 
 ### zsh, plugins y starship
 
@@ -1213,7 +1416,7 @@ El fondo de pantalla viaja dentro de `.config/quickshell/` (`Wallpaper.qml` y `w
 
 Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1](#11-red-networkmanager)). Activa también el audio ([apartado 1.2](#12-audio-pipewire)): los paquetes de PipeWire llegan con `pkglist.txt`, pero sus servicios de usuario se activan con `systemctl --user enable --now pipewire pipewire-pulse wireplumber`.
 
-**Cambia la shell a zsh** (`chsh -s /usr/bin/zsh`; este ajuste **no viaja con el repositorio**) y **cierra la sesión del TTY** (`exit`) para iniciarla de nuevo: salir de Hyprland no basta ([apartado 12](#s12)). Con el `.zprofile` copiado, Hyprland arranca solo tras el login ([apartado 4.1](#41-arranque-automático-de-hyprland)); si no, entra con `start-hyprland`. La barra, la bandeja del sistema y el fondo arrancan solos; la bandeja solo se ve cuando hay alguna aplicación en segundo plano.
+**Cambia la shell a zsh** (`chsh -s /usr/bin/zsh`; este ajuste **no viaja con el repositorio**) y **cierra la sesión del TTY** (`exit`) para iniciarla de nuevo: salir de Hyprland no basta ([apartado 12](#s12)). Con el `.zprofile` copiado, Hyprland arranca solo tras el login ([apartado 4.1](#41-arranque-automático-de-hyprland)); si no, entra con `start-hyprland`. La barra (con el chip de música), la bandeja del sistema y el fondo arrancan solos; la bandeja solo se ve cuando hay alguna aplicación en segundo plano, y el chip de música cuando hay algo sonando.
 
 | Fichero | Contenido |
 |---|---|
@@ -1236,34 +1439,16 @@ Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1
 <a id="s14"></a>
 ## 14. 📝 Pendiente
 
-- [x] Ajustar el hueco entre la barra superior y el panel lateral
-- [x] Workspaces en la barra
-- [x] Workspaces limitados a 5 (barra y atajos)
-- [x] Cambio a NetworkManager
-- [x] Chip de red en la barra (cable)
-- [x] Panel desplegable de red al pulsar el chip (IP, puerta de enlace, DNS, MAC, velocidad)
-- [x] Audio con PipeWire
-- [x] Volumen en la barra
-- [x] Fondo de pantalla
-- [x] `kitty.conf` propio (tipografía, colores y transparencia)
-- [x] Barra y panel lateral transparentes (islas flotantes)
-- [x] Zsh, plugins y prompt (configurados y probados)
-- [x] Cambiar la shell por defecto a zsh (`chsh -s /usr/bin/zsh`)
-- [x] Arranque automático de Hyprland tras el login (`~/.zprofile`)
-- [x] Cursor del ratón más pequeño (tamaño 16)
-- [x] Estructura del repositorio al principio del README y enlaces del índice corregidos
-- [x] Panel lateral como bandeja del sistema (solo apps en segundo plano), con botón para cerrarlas del todo (`trayquit.sh`)
-- [x] Máscara de entrada en el panel lateral (los huecos no bloquean clics)
-
 **Próximas mejoras de la barra**
 
-- [ ] Spotify en la barra: canción, controles y carátula
+- [ ] Chip de música: carátula, barra de progreso y panel desplegable; probar Spotify de escritorio en hardware real
 - [ ] Calendario desplegable al pulsar el reloj
 - [ ] Tiempo (meteorología) en la barra
 - [ ] Panel de audio con salida y micrófono lado a lado, y silencio para cada uno
 - [ ] Panel de notificaciones con avisos emergentes e historial
 - [ ] Configuración de la resolución de pantalla
 - [ ] Gestor de pantalla para elegir resolución, frecuencia y escala del monitor físico (hardware real)
+- [ ] Tema común: una misma fuente y paleta de colores para la barra, la bandeja, el chip de música y el terminal
 
 **Escritorio**
 
