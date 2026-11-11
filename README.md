@@ -15,11 +15,12 @@ PikSOn/
 │   └── .zprofile            # Arranque automático de Hyprland (se copia a ~/.zprofile)
 └── .config/                 # Configuraciones (se copian a ~/.config)
     ├── hypr/
-    │   └── hyprland.lua     # Hyprland: monitor, atajos, cursor, terminal y arranque automático
+    │   └── hyprland.lua     # Hyprland: monitor, atajos, bordes, cursor, terminal y arranque automático
     ├── kitty/
-    │   └── kitty.conf       # Terminal: tipografía, colores y transparencia
+    │   └── kitty.conf       # Terminal: tipografía, colores (Pergamino nocturno) y transparencia
     └── quickshell/
         ├── shell.qml        # Punto de entrada
+        ├── Theme.qml        # Tema: colores, tamaños y fuentes (singleton)
         ├── Wallpaper.qml    # Fondo de pantalla
         ├── wallpaper.jpg    # Imagen del fondo
         ├── Bar.qml          # Barra superior (5 workspaces, música, reloj, volumen, chip y panel de red)
@@ -39,9 +40,9 @@ PikSOn/
 | `aur-pkglist.txt` | Paquetes del AUR, generada con `pacman -Qqem` |
 | `zsh/.zshrc` | Shell zsh con plugins y starship |
 | `zsh/.zprofile` | Lanza Hyprland al iniciar sesión en el TTY1 |
-| `.config/hypr/` | Configuración de Hyprland, incluidos el monitor, los atajos y el cursor |
+| `.config/hypr/` | Configuración de Hyprland, incluidos el monitor, los atajos, los bordes y el cursor |
 | `.config/kitty/` | Configuración del terminal |
-| `.config/quickshell/` | Barra superior, chip de música, calendario, bandeja del sistema, fondo y scripts de apoyo |
+| `.config/quickshell/` | Tema, barra superior, chip de música, calendario, bandeja del sistema, fondo y scripts de apoyo |
 
 > 💡 Las carpetas de `.config/` replican la ruta que tendrían en `~/.config`. `zsh/` está fuera porque `.zshrc` y `.zprofile` viven en la carpeta personal; con GNU Stow se enlazarán automáticamente.
 
@@ -302,6 +303,8 @@ fc-cache -f
 fc-list | grep -i jetbrains     # el nombre de familia va entre los dos puntos
 ```
 
+Los colores son los de la paleta **Pergamino nocturno** (los mismos valores que `Theme.qml`, [9.13](#913-tema-themeqml)).
+
 `~/.config/kitty/kitty.conf`:
 
 ```conf
@@ -310,21 +313,39 @@ font_family     JetBrainsMono Nerd Font Mono
 font_size       10.0
 
 # aspecto
-background_opacity      0.5
+background_opacity      0.7
 window_padding_width    10
 cursor_shape    beam
 scrollback_lines        10000
 confirm_os_window_close 0
 enable_audio_bell       no
 
-# colores
-foreground      #cdd6f4
-background      #2a2725
-selection_foreground    #1e1e2e
-selection_background    #f5e0dc
-cursor  #f5e0dc
-cursor_text_color       #1e1e2e
-url_color       #f5e0dc
+# colores: Pergamino nocturno (mismos valores que Theme.qml)
+foreground      #f6ebcf
+background      #34261b
+selection_foreground    #2d1e12
+selection_background    #e2b564
+cursor  #e2b564
+cursor_text_color       #2d1e12
+url_color       #cf7b55
+
+# paleta ANSI (ls, git, mensajes de error...)
+color0  #34261b
+color1  #c0584a
+color2  #8fae66
+color3  #e2b564
+color4  #7d93ae
+color5  #a97b8f
+color6  #6fa597
+color7  #d9ccae
+color8  #6b4f39
+color9  #cf7b55
+color10 #adc783
+color11 #ebc98a
+color12 #9fb3c9
+color13 #c49aae
+color14 #92c2b5
+color15 #f6ebcf
 ```
 
 Abre una terminal nueva (`Super + Enter`) o recarga la actual con **`Ctrl + Shift + F5`**.
@@ -333,18 +354,19 @@ Abre una terminal nueva (`Super + Enter`) o recarga la actual con **`Ctrl + Shif
 |---|---|
 | `foreground` | Color del **texto** |
 | `background` | Color del **relleno** de la ventana |
-| `background_opacity` | Transparencia: `1.0` opaco, `0.5` mitad, valores menores = más transparente |
+| `background_opacity` | Transparencia: `1.0` opaco; se usa `0.7`; valores menores = más transparente |
 | `font_size` | Tamaño de letra (10 con la escala 1,25 del monitor) |
+| `color0` ... `color15` | La paleta ANSI de 16 colores: los normales (0-7) y los claros (8-15) |
 
 > 💡 **El tamaño de letra depende de la escala del monitor** ([apartado 8](#otros-ajustes-de-hyprlandlua-monitor-escala-y-frecuencia)): con la escala 1,25 queda bien con **10**; con la escala automática de 1,67 hacía falta 8. Si cambias la escala, ajusta el tamaño de letra (el equivalente es `tamaño × escala anterior ÷ escala nueva`).
 
 > 💡 **Probar en caliente** (temporal, no toca el fichero): `Ctrl + Shift + +` / `-` cambian el tamaño de letra, `Ctrl + Shift + Retroceso` vuelve al valor del fichero, y `Ctrl + Shift + A` seguido de `L` (más transparente), `M` (menos) o `D` (valor del fichero) cambian la opacidad.
 
-> 💡 Si no se ve el color elegido, suele ser la transparencia: con `background_opacity 0.5` la imagen de fondo domina. Sube el valor a 0.8 para que el color del terminal se note.
+> 💡 Si no se ve el color elegido, suele ser la transparencia: con valores bajos (0.5) la imagen de fondo domina. Con `0.7` el color del terminal se nota y el fondo sigue asomando.
 
-> 💡 No mezcles `foreground` y `background`: un gris pensado para el texto puesto en `background` da una ventana pálida.
+> 💡 No mezcles `foreground` y `background`: un tono pensado para el texto puesto en `background` da una ventana pálida.
 
-> 💡 La paleta ANSI de 16 colores (`color0` ... `color15`, los que usan `ls`, `git` o los mensajes de error) no está definida: kitty usa la suya por defecto. Se puede añadir más adelante, o moverla a un fichero aparte y cargarla con `include`.
+> 💡 **Los colores están repetidos en tres sitios**: `Theme.qml` (barra y paneles), `kitty.conf` (terminal) y `hyprland.lua` (bordes de las ventanas). Si cambias de paleta, hay que tocar los tres a mano; unificarlos en una sola fuente está pendiente ([apartado 14](#s14)).
 
 > 💡 Para ver la configuración que kitty está aplicando y sus errores: **`Ctrl + Shift + F6`** dentro de una terminal de kitty (la opción de línea de órdenes `kitty --debug-config` ya no existe en kitty 0.49).
 
@@ -390,6 +412,10 @@ echo "set linenumbers" >> $HOME/.nanorc
 ```
 
 Para ir directamente a una línea: `Ctrl + _` (barra baja), el número y `Enter`.
+
+### Buscar y reemplazar
+
+`Ctrl + \` pide el texto a buscar y el que lo sustituye. Con `A` en la pregunta de cada coincidencia se reemplazan **todas** de una vez. Es la forma más cómoda de cambiar un valor repetido por muchas líneas (por ejemplo, un color por `Theme.fg`).
 
 ---
 
@@ -498,12 +524,41 @@ Comprueba la escala y la resolución con `hyprctl monitors` (líneas `scale:` y 
 
 > 💡 **Discord necesita ≈ 940 px de ancho:** en pantalla dividida (≈ 750 px por mitad con la escala 1,25) puede recortarse por la derecha. Se resuelve con la distribución de las ventanas (por ejemplo, Discord a pantalla completa en su propio workspace), no con la escala.
 
+### Otros ajustes de `hyprland.lua`: bordes y separación
+
+Los bordes de las ventanas usan los colores del tema **Pergamino nocturno** (dorado para la ventana activa, marrón apagado para las inactivas). Están en el bloque `general` de `hl.config`:
+
+```lua
+hl.config({
+    general = {
+        gaps_in = 5,
+        gaps_out = 20,
+        border_size = 2,
+        active_border = { colors = {"rgba(e2b564ee)", "rgba(cf7b55ee)"}, angle = 45 },
+        inactive_border = "rgba(8c6d4faa)",
+        -- ...el resto de opciones se deja como estaba
+    },
+})
+```
+
+| Opción | Qué controla |
+|---|---|
+| `gaps_in` | Separación entre ventanas (5) |
+| `gaps_out` | Separación entre las ventanas y el borde de la pantalla (20) |
+| `border_size` | Grosor del borde (2) |
+| `active_border` | Borde de la ventana activa: degradado dorado → terracota a 45° |
+| `inactive_border` | Borde de las demás: marrón apagado |
+
+> 💡 En Hyprland los colores se escriben **`rgba(RRGGBBAA)`**: el alfa va al **final**. En QML (`Theme.qml`) y en las demás piezas el formato es **`#AARRGGBB`**, con el alfa al **principio**.
+
+> 💡 Si los bordes siguen viéndose de otro color tras cambiarlos, comprueba que no hay otra definición más abajo en el fichero que los sobrescriba: `grep -n "border" $HOME/.config/hypr/hyprland.lua`.
+
 ---
 
 <a id="s9"></a>
 ## 9. 🧩 Quickshell: barra, panel lateral y fondo
 
-**Quickshell** es un kit para construir la interfaz del escritorio (barras, paneles, widgets) con QML. Aquí se usa para una barra superior (con un chip de música y un reloj con calendario), un panel lateral que hace de **bandeja del sistema** (las aplicaciones que siguen abiertas en segundo plano) y el fondo de pantalla.
+**Quickshell** es un kit para construir la interfaz del escritorio (barras, paneles, widgets) con QML. Aquí se usa para una barra superior (con un chip de música y un reloj con calendario), un panel lateral que hace de **bandeja del sistema** (las aplicaciones que siguen abiertas en segundo plano) y el fondo de pantalla. Todos comparten colores, tamaños y fuentes a través de un **tema** ([9.13](#913-tema-themeqml)).
 
 ### 9.1 Instalación
 
@@ -519,6 +574,7 @@ La configuración vive en `~/.config/quickshell/` y se divide en piezas:
 | Fichero | Función |
 |---|---|
 | `shell.qml` | Punto de entrada: carga las demás piezas |
+| `Theme.qml` | El tema: paleta, tamaños y fuentes, compartidos por todas las piezas ([9.13](#913-tema-themeqml)) |
 | `Wallpaper.qml` | Fondo de pantalla (una ventana en la capa `Background`) |
 | `wallpaper.jpg` | La imagen del fondo |
 | `Bar.qml` | Barra superior: contenedor fijo de 5 workspaces, chip de música, reloj (con calendario desplegable), chips de volumen y de red y panel desplegable de red |
@@ -553,7 +609,7 @@ Quickshell **recarga solo** al guardar un fichero. Si hay un error, aparece una 
 
 > 💡 Los recuadros numerados de la izquierda de la barra son los **workspaces** (escritorios virtuales) de Hyprland. Solo hay **5**; un clic sobre el número cambia de escritorio.
 
-> 💡 Los workspaces van dentro de un **contenedor oscuro de anchura fija** (152 px), calculada para 5 recuadros: `5 × 24 px + 4 × 5 px de separación + 12 px de margen interior`. Así el espacio queda reservado aunque solo exista un workspace, y las piezas que se añadan a su derecha no se desplazan. El número de recuadros es la propiedad **`slots`** de `wsBox` en `Bar.qml` (`cell` es el tamaño de cada recuadro y `gap` la separación): al cambiarla, el contenedor se recalcula solo. Para anclar otra pieza junto a él, se usa `anchors.left: wsBox.right` (así está colocado el chip de música).
+> 💡 Los workspaces van dentro de un **contenedor oscuro de anchura fija** (152 px), calculada para 5 recuadros: `5 × 24 px + 4 × 5 px de separación + 12 px de margen interior`. Así el espacio queda reservado aunque solo exista un workspace, y las piezas que se añadan a su derecha no se desplazan. El número de recuadros es la propiedad **`slots`** de `wsBox` en `Bar.qml` (`cell` es el tamaño de cada recuadro y `gap` la separación): al cambiarla, el contenedor se recalcula solo. Para anclar otra pieza junto a él, se usa `anchors.left: wsBox.right` (así está colocado el chip de música). El workspace activo se resalta con `Theme.accent`.
 
 > 💡 El panel lateral (`Dock.qml`) está anclado arriba, a la derecha y abajo: así reserva una franja de 34 px y las ventanas no pasan por debajo de los iconos. Quickshell ya descuenta el espacio de la barra superior, por lo que no hace falta ningún margen manual arriba.
 
@@ -689,6 +745,7 @@ Erratas reales encontradas al montar esta configuración:
 | `Expected token ','` (en `acceptedButtons`) | Texto duplicado al pegar: `Qt.LeftButtons: Qt.LeftButton \| ...` | `acceptedButtons: Qt.LeftButton \| Qt.RightButton` |
 | `Cannot assign to non-existent property "margin"` | Falta la `s` | `anchors.margins` |
 | `Cannot assign to non-existent property "onNetOpenChanged"` | Se borró `property bool netOpen: false` al añadir `calOpen` | Deben existir **las dos** propiedades |
+| `Cannot assign a value to a signal (use 'on<Signal>: ...')` en `Theme.qml` | Una propiedad llamada `onAccent`: QML trata cualquier nombre `on` + mayúscula como un manejador de señal | Renombrarla (`fgOnAccent`) en `Theme.qml` y en todos los sitios donde se use |
 | `Invalid property assignment: color expected` | Color sin almohadilla (`"89b4fa"`) | `"#89b4fa"` |
 | `Property 'strings' ... is not a function` | Nombre inventado | `substring` |
 | `ReferenceError: i2 is not defined` | Se usa una variable que no se declaró (`i2` por `i1`) | El nombre declarado |
@@ -703,6 +760,7 @@ Erratas reales encontradas al montar esta configuración:
 | El chip de música sigue mostrando el texto largo | La etiqueta no usa la función | `text: chip.shortText()` |
 | `impicitWidth` no existe | Falta una `l` | `implicitWidth` |
 | Al pulsar en **cualquier sitio** de la barra se abre el calendario, y los chips dejan de responder | El `MouseArea` del reloj quedó **fuera** del `Text` (con `anchors.fill: parent` cubre toda la barra) | Colocarlo **dentro** del `Text` del reloj, antes de su `}` |
+| Un chip o panel se ve con el color equivocado (por ejemplo, el panel con el color del chip) | Se cambiaron los dos nombres a la vez y quedaron cruzados | `bgChip` es para los chips de la barra y `bgPopup` para los paneles desplegables |
 
 Y en los scripts de shell y en la terminal:
 
@@ -721,6 +779,7 @@ Y en los scripts de shell y en la terminal:
 | Hyprland no arranca solo tras el login | `-z "WAYLAND_DISPLAY"` sin `$` en `~/.zprofile` (compara texto literal, nunca vacío) | `-z "$WAYLAND_DISPLAY"` ([4.1](#41-arranque-automático-de-hyprland)) |
 | `unrecognized argument: --online` (git) | `--online` por `--oneline` | `git log --oneline` |
 | `cp: missing destination file operand` | Falta la segunda ruta (el destino) | `cp origen destino` |
+| `cp: -r not specified; omitting directory` | Se copia una **carpeta** sin `-r` | `cp -r carpeta destino/` |
 | `playerctl` dice `No players found` con música sonando | El reproductor no se anuncia por MPRIS (o aún no ha iniciado sesión) | Probar con otro (Brave con un vídeo); ver [9.11](#911-chip-de-música-en-la-barra) |
 | `Unknown flag: --debug-config` (kitty) | Esa opción ya no existe en kitty 0.49 | `Ctrl + Shift + F6` dentro de kitty |
 | `zsh: command not found: man` | `man` no viene instalado | `sudo pacman -S --needed man-db` |
@@ -861,6 +920,8 @@ PopupWindow {
 
 > 💡 El panel se cierra con un segundo clic en el chip; todavía no se cierra al pulsar fuera.
 
+> 💡 Este panel es el provisional: el definitivo será el **medallón** de red y Bluetooth ([apartado 14](#s14)).
+
 ### 9.8 Chip de volumen en la barra
 
 A la izquierda del chip de red se muestra el volumen, por ejemplo **`Vol 40%`**. Requiere PipeWire ([apartado 1.2](#12-audio-pipewire)).
@@ -974,6 +1035,8 @@ PanelWindow {
 
 > 💡 Si la pantalla es de otra proporción que la imagen (por ejemplo, 16:10 frente a 16:9), se recortan los lados y puede parecer descentrada. Para ver la resolución real: `hyprctl monitors`, y las capas con `hyprctl layers`.
 
+> 💡 El fondo actual tiene tonos azulados y verdosos que chocan con la paleta cálida del tema. Está pendiente elegir uno de tonos marrones o tintarlo hacia sepia ([apartado 14](#s14)).
+
 > ⚠️ Cuidado con las mayúsculas: `Quickshell`, no `Quicksell`; `WlrLayershell`, no `Wlrlayershell`.
 
 ### 9.10 Barra y panel transparentes (islas flotantes)
@@ -985,7 +1048,7 @@ En lugar de una franja entera, la barra y el panel lateral tienen la ventana **t
 color: "transparent"
 ```
 
-Para ajustar los bloques, se les puede añadir un valor alfa al color, por ejemplo `#cc313244` (los dos primeros dígitos son la opacidad, de `00` a `ff`).
+Para ajustar los bloques, se les da transparencia con un valor alfa en el color. Esos valores viven en el tema: `Theme.bgChip` (`#f04a382a`) para los chips de la barra y `Theme.bgPopup` (`#fa4a382a`) para los paneles desplegables; los dos primeros dígitos son la opacidad, de `00` a `ff`. Todos los chips llevan además un borde fino (`border.color: Theme.line`, `border.width: 1`) para que se distingan sobre un fondo oscuro.
 
 > ⚠️ **Limitación conocida (barra superior):** la ventana transparente sigue ocupando su franja entera: **reserva espacio** (las ventanas no llegan al borde) y **bloquea los clics** sobre lo que haya debajo. Se resuelve con una máscara de entrada que limite la zona sensible a los bloques (pendiente, [apartado 14](#s14)).
 
@@ -1055,8 +1118,10 @@ Rectangle {
     visible: player !== null
     height: 28
     width: row.implicitWidth + 20
-    radius: 8
-    color: "#cc313244"
+    radius: Theme.radius
+    color: Theme.bgChip
+    border.color: Theme.line
+    border.width: 1
 
     Row {
         id: row
@@ -1070,8 +1135,8 @@ Rectangle {
             Text {
                 anchors.centerIn: parent
                 text: "\uf048"
-                color: "#cdd6f4"
-                font.family: "JetBrainsMono Nerd Font"
+                color: Theme.fg
+                font.family: Theme.fontIcons
                 font.pixelSize: 12
             }
 
@@ -1088,8 +1153,8 @@ Rectangle {
             Text {
                 anchors.centerIn: parent
                 text: chip.player && chip.player.isPlaying ? "\uf04c" : "\uf04b"
-                color: "#cdd6f4"
-                font.family: "JetBrainsMono Nerd Font"
+                color: Theme.fg
+                font.family: Theme.fontIcons
                 font.pixelSize: 12
             }
 
@@ -1106,8 +1171,8 @@ Rectangle {
             Text {
                 anchors.centerIn: parent
                 text: "\uf051"
-                color: "#cdd6f4"
-                font.family: "JetBrainsMono Nerd Font"
+                color: Theme.fg
+                font.family: Theme.fontIcons
                 font.pixelSize: 12
             }
 
@@ -1126,7 +1191,7 @@ Rectangle {
                 anchors.verticalCenter: parent.verticalCenter
                 width: parent.width
                 elide: Text.ElideRight
-                color: "#cdd6f4"
+                color: Theme.fg
                 font.pixelSize: 12
                 text: chip.shortText()
             }
@@ -1158,13 +1223,15 @@ Rectangle {
 | `visible: player !== null` | Muestra el chip solo si hay reproductor |
 | `"\uf048"`, `"\uf04b"`, `"\uf04c"`, `"\uf051"` | Iconos de anterior, reproducir, pausa y siguiente (fuente Nerd Font) |
 
-> 💡 El chip usa la misma fuente y paleta que el resto de la barra. Si algún día se unifica el tema, bastará con cambiar los colores (`#cc313244` y `#cdd6f4`) y la fuente de este fichero.
+> 💡 El chip usa el tema: los colores (`Theme.fg`, `Theme.bgChip`, `Theme.line`), el radio (`Theme.radius`) y la fuente de iconos (`Theme.fontIcons`) vienen de `Theme.qml` ([9.13](#913-tema-themeqml)). Si alguna línea de tu `Player.qml` difiere en detalles de este bloque, manda siempre el fichero del repositorio.
 
 > 💡 Los títulos con corchetes (`[Official Video]`) no se recortan: solo se recorta lo que va entre paréntesis.
 
 > ⚠️ **Spotify de escritorio en la VM:** el cliente (instalado con `sudo pacman -S spotify-launcher`) arranca, pero **no dibuja ventana ni se anuncia por MPRIS**, ni con `LIBGL_ALWAYS_SOFTWARE=1` ni con `--disable-gpu`; es una limitación de la máquina virtual sin GPU. El chip se prueba con **Brave** (un vídeo de YouTube) y debería reconocer a Spotify en hardware real. Cuidado con `spotify-launcher -- --opcion`: las opciones tras `--` se toman como una dirección (`--uri=`) y no se aplican.
 
 > 💡 **Spotify web** (`open.spotify.com` en Brave) también se anuncia por MPRIS, pero necesita **Widevine** activado en `brave://settings/extensions` para reproducir.
+
+> 💡 **La cola de canciones no se puede mostrar** con MPRIS: ni Spotify ni YouTube en Brave exponen la lista de pistas siguientes. Solo sería posible con la API web de Spotify, en hardware real ([apartado 14](#s14)).
 
 ### 9.12 Calendario del reloj
 
@@ -1176,7 +1243,7 @@ Al **pulsar el reloj** del centro de la barra se despliega, justo debajo y centr
 | `‹` y `›` | Mes anterior y siguiente |
 | Título (mes y año) | Al pulsarlo, vuelve al mes actual |
 | Fila `L M X J V S D` | Los días de la semana, empezando en **lunes** |
-| Día de hoy | Resaltado en azul (solo si el mes mostrado es el actual) |
+| Día de hoy | Resaltado en dorado (solo si el mes mostrado es el actual) |
 | Segundo clic en el reloj | Cierra el calendario (todavía no se cierra al pulsar fuera) |
 
 `~/.config/quickshell/Calendar.qml`:
@@ -1212,9 +1279,9 @@ PopupWindow {
 
     Rectangle {
         anchors.fill: parent
-        radius: 8
-        color: "#f2313244"
-        border.color: "#45475a"
+        radius: Theme.radius
+        color: Theme.bgPopup
+        border.color: Theme.line
         border.width: 1
 
         Column {
@@ -1233,8 +1300,8 @@ PopupWindow {
                     Text {
                         anchors.centerIn: parent
                         text: "\uf100"
-                        color: "#cdd6f4"
-                        font.family: "JetBrainsMono Nerd Font"
+                        color: Theme.fg
+                        font.family: Theme.fontIcons
                         font.pixelSize: 12
                     }
 
@@ -1251,8 +1318,8 @@ PopupWindow {
                     Text {
                         anchors.centerIn: parent
                         text: "\uf104"
-                        color: "#cdd6f4"
-                        font.family: "JetBrainsMono Nerd Font"
+                        color: Theme.fg
+                        font.family: Theme.fontIcons
                         font.pixelSize: 12
                     }
 
@@ -1269,7 +1336,7 @@ PopupWindow {
                     Text {
                         anchors.centerIn: parent
                         text: cal.monthNames[cal.shown.getMonth()] + " " + cal.shown.getFullYear()
-                        color: "#cdd6f4"
+                        color: Theme.fg
                         font.pixelSize: 12
                     }
 
@@ -1286,8 +1353,8 @@ PopupWindow {
                     Text {
                         anchors.centerIn: parent
                         text: "\uf105"
-                        color: "#cdd6f4"
-                        font.family: "JetBrainsMono Nerd Font"
+                        color: Theme.fg
+                        font.family: Theme.fontIcons
                         font.pixelSize: 12
                     }
 
@@ -1304,8 +1371,8 @@ PopupWindow {
                     Text {
                         anchors.centerIn: parent
                         text: "\uf101"
-                        color: "#cdd6f4"
-                        font.family: "JetBrainsMono Nerd Font"
+                        color: Theme.fg
+                        font.family: Theme.fontIcons
                         font.pixelSize: 12
                     }
 
@@ -1329,7 +1396,7 @@ PopupWindow {
                         Text {
                             anchors.centerIn: parent
                             text: parent.modelData
-                            color: "#a6adc8"
+                            color: Theme.fgMuted
                             font.pixelSize: 11
                         }
                     }
@@ -1358,13 +1425,13 @@ PopupWindow {
                             width: 24
                             height: 24
                             radius: 6
-                            color: cell.isToday ? "#89b4fa" : "transparent"
+                            color: cell.isToday ? Theme.accent : "transparent"
                         }
 
                         Text {
                             anchors.centerIn: parent
                             text: cell.valid ? cell.day : ""
-                            color: cell.isToday ? "#1e1e2e" : "#cdd6f4"
+                            color: cell.isToday ? Theme.fgOnAccent : Theme.fg
                             font.pixelSize: 12
                         }
                     }
@@ -1389,7 +1456,7 @@ property bool calOpen: false
 ```qml
 Text {
     anchors.centerIn: parent
-    color: "#cdd6f4"
+    color: Theme.fg
     font.pixelSize: 15
     text: Qt.formatDateTime(clock.date, "ddd d MMM HH:mm:ss")
 
@@ -1423,7 +1490,91 @@ Calendar {
 
 > 💡 La hora de la barra sale del reloj del sistema: si va atrasada, ver [1.3](#13-zona-horaria-y-hora).
 
-> 💡 Colores y fuente son los mismos que los del resto de la barra; quedan pendientes del tema común ([apartado 14](#s14)).
+> 💡 Este calendario es el sencillo. El definitivo será la **agenda de cuero**, con una página para el mes y otra para el día ([apartado 14](#s14)).
+
+### 9.13 Tema: `Theme.qml`
+
+Toda la apariencia de Quickshell (colores, tamaños y fuentes) vive en **un solo fichero**, `~/.config/quickshell/Theme.qml`, que el resto de piezas consultan con el prefijo `Theme.` (`Theme.fg`, `Theme.bgChip`...). Es un *singleton*: QML lo carga una sola vez y no hace falta ningún `import` ni `qmldir`, porque está en la misma carpeta. Para cambiar el aspecto del escritorio, se edita este fichero y Quickshell recarga solo.
+
+La paleta se llama **Pergamino nocturno**: marrones cálidos de fondo y letra color vainilla, como una biblioteca antigua de noche. Se eligió tras descartar otras (verdes y azules) por comodidad visual.
+
+**Fuentes** (una serif para detalles elegantes y una monoespaciada para el resto):
+
+```bash
+sudo pacman -S --needed ttf-cormorant ttf-jetbrains-mono-nerd
+fc-cache -f
+fc-list | grep -i cormorant     # debe aparecer "Cormorant Garamond"
+```
+
+`~/.config/quickshell/Theme.qml`:
+
+```qml
+pragma Singleton
+import Quickshell
+import QtQuick
+
+Singleton {
+    // Pergamino nocturno: marrones cálidos y letra vainilla
+    readonly property color bgChip: "#f04a382a"
+    readonly property color bgPopup: "#fa4a382a"
+    readonly property color bgCell: "#808c6c4e"
+    readonly property color line: "#8c6d4f"
+    readonly property color fg: "#f6ebcf"
+    readonly property color fgMuted: "#d0b992"
+    readonly property color accent: "#e2b564"
+    readonly property color accent2: "#cf7b55"
+    readonly property color ok: "#adc783"
+    readonly property color fgOnAccent: "#2d1e12"
+
+    readonly property int radius: 14
+    readonly property int radiusSmall: 8
+
+    readonly property string fontSerif: "Cormorant Garamond"
+    readonly property string fontUi: "JetBrainsMono Nerd Font"
+    readonly property string fontIcons: "JetBrainsMono Nerd Font"
+
+    readonly property int sizeText: 12
+    readonly property int sizeClock: 15
+    readonly property int chipHeight: 28
+}
+```
+
+| Propiedad | Para qué se usa |
+|---|---|
+| `bgChip` | Fondo de los chips de la barra (casi opaco) |
+| `bgPopup` | Fondo de los paneles desplegables (calendario, red) |
+| `bgCell` | Fondo de las casillas pequeñas (por ejemplo, los workspaces dentro de su contenedor) |
+| `line` | Bordes finos |
+| `fg` | Texto principal (vainilla) |
+| `fgMuted` | Texto secundario y días de la semana |
+| `accent` | El color de énfasis (dorado): workspace activo, día de hoy |
+| `accent2` | Segundo énfasis (terracota): al pasar el ratón por la bandeja |
+| `ok` | Estado correcto (verde apagado) |
+| `fgOnAccent` | Texto que va **sobre** `accent` |
+| `radius`, `radiusSmall` | Esquinas de paneles y chips, y de las casillas pequeñas |
+| `fontSerif`, `fontUi`, `fontIcons` | Tipografías: serif de detalle, texto y iconos |
+| `sizeText`, `sizeClock`, `chipHeight` | Tamaños de letra y altura de los chips |
+
+Uso en cualquier pieza:
+
+```qml
+Rectangle {
+    color: Theme.bgChip
+    radius: Theme.radius
+    border.color: Theme.line
+    border.width: 1
+
+    Text { color: Theme.fg; text: "Hola" }
+}
+```
+
+> ⚠️ **Ninguna propiedad puede llamarse `on` + mayúscula** (`onAccent`, `onClick`...): QML la toma por un manejador de señal y falla con `Cannot assign a value to a signal`. Por eso el color del texto sobre el dorado se llama `fgOnAccent` y no `onAccent`.
+
+> 💡 **Formato de color:** en QML es `#AARRGGBB` (el alfa va **delante**: `#f04a382a` es casi opaco). En Hyprland es `rgba(RRGGBBAA)` (el alfa va **detrás**).
+
+> 💡 **Cambiar los colores = editar este fichero.** Quickshell se actualiza al guardar. Pero el terminal ([5.2](#52-configuración-propia-kittyconf)) y los bordes de las ventanas ([apartado 8](#otros-ajustes-de-hyprlandlua-bordes-y-separación)) tienen sus propias copias de la paleta y hay que cambiarlos aparte.
+
+> 💡 Un tema es, además, un **punto único de verdad** para el futuro: los paneles nuevos (reproductor, volumen, red) ya se escribirán usando `Theme.` desde el principio. Los colores de los lomos de los workspaces se añadirán aquí como `spine1`…`spine5`.
 
 ---
 
@@ -1494,21 +1645,34 @@ cd PikSOn
 
 ### 11.5 Subir cambios
 
-Los ficheros de configuración que se editan en `~/.config` hay que **copiarlos al repositorio** antes de subirlos (cada uno con su origen y su destino):
+Los ficheros de configuración que se editan en `~/.config` hay que **copiarlos al repositorio** antes de subirlos. Desde la carpeta del repositorio, con rutas relativas:
 
 ```bash
 cd $HOME/PikSOn
+cp -r $HOME/.config/quickshell .config/
+cp -r $HOME/.config/kitty .config/
+cp -r $HOME/.config/hypr .config/
+```
+
+Para un **fichero suelto** (cada uno con su origen y su destino, y sin `-r`):
+
+```bash
 cp $HOME/.config/quickshell/Bar.qml .config/quickshell/Bar.qml
 ```
 
 Después:
 
 ```bash
-git pull --no-rebase --no-edit
+git status
 git add .
 git commit -m "descripción del cambio"
+git pull --no-rebase --no-edit
 git push
 ```
+
+> 💡 **`-r` (recursivo)** es lo que permite copiar una **carpeta** con todo lo que contiene; sin él, `cp` responde `omitting directory`. Para un fichero suelto no hace falta.
+
+> 💡 `cp -r` sobrescribe los ficheros del mismo nombre, pero **no borra** del repositorio los que hayas eliminado de tu carpeta local. Por eso conviene mirar `git status` antes de subir.
 
 > 💡 Revisa siempre `git status` antes de hacer `git add .`: deben aparecer solo los ficheros que esperas, sin copias `.bak` ni nombres raros.
 
@@ -1751,7 +1915,7 @@ cp zsh/.zshrc $HOME/.zshrc
 cp zsh/.zprofile $HOME/.zprofile      # opcional: arranque automático de Hyprland
 ```
 
-El fondo de pantalla viaja dentro de `.config/quickshell/` (`Wallpaper.qml` y `wallpaper.jpg`).
+El fondo de pantalla viaja dentro de `.config/quickshell/` (`Wallpaper.qml` y `wallpaper.jpg`), y el tema en `Theme.qml`.
 
 Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1](#11-red-networkmanager)). Activa también el audio ([apartado 1.2](#12-audio-pipewire)): los paquetes de PipeWire llegan con `pkglist.txt`, pero sus servicios de usuario se activan con `systemctl --user enable --now pipewire pipewire-pulse wireplumber`. Ajusta la **zona horaria** ([1.3](#13-zona-horaria-y-hora)), que tampoco viaja con el repositorio.
 
@@ -1761,13 +1925,13 @@ Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1
 |---|---|
 | `pkglist.txt` | Paquetes de los repositorios oficiales |
 | `aur-pkglist.txt` | Paquetes del AUR |
-| `.config/` | Configuración de Hyprland, Quickshell y kitty |
+| `.config/` | Configuración de Hyprland, Quickshell (con su tema) y kitty |
 | `zsh/.zshrc` | Configuración de zsh (se copia a `~/.zshrc`) |
 | `zsh/.zprofile` | Arranque automático de Hyprland en el TTY1 (se copia a `~/.zprofile`) |
 
 > ⚠️ Requiere `yay` instalado ([apartado 7](#s7)). Las listas incluyen `virtualbox-guest-utils`, que solo hace falta en una VM: retíralo en hardware real. En hardware real, quita también `LIBGL_ALWAYS_SOFTWARE=1` de `hyprland.lua` (terminal y Quickshell), y revisa la **escala** y la **frecuencia** del monitor ([apartado 8](#otros-ajustes-de-hyprlandlua-monitor-escala-y-frecuencia)): la escala `1.25` y el tamaño de letra de kitty en `10` están ajustados a la VM.
 
-> 💡 Cada vez que instales algo nuevo, regenera las listas. Cuidado con el nombre: es `pkglist.txt` (con **g**); un `pklist.txt` crearía un fichero nuevo y distinto.
+> 💡 Cada vez que instales algo nuevo, regenera las listas. Cuidado con el nombre: es `pkglist.txt` (con **g**); un `pklist.txt` crearía un fichero nuevo y distinto. La fuente serif del tema (`ttf-cormorant`, [9.13](#913-tema-themeqml)) debe aparecer en `pkglist.txt` tras regenerarla.
 > ```bash
 > pacman -Qqen > pkglist.txt
 > pacman -Qqem > aur-pkglist.txt
@@ -1778,48 +1942,51 @@ Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1
 <a id="s14"></a>
 ## 14. 📝 Pendiente
 
-**Lo primero al retomar: el diseño visual**
+**Diseños decididos, por construir (en este orden)**
 
-- [ ] Decidir la estética de **todo lo implementado** y centralizarla en un tema común (idealmente un único fichero, `Theme.qml`, que importen la barra, el chip de música, el calendario y la bandeja):
-  - Tamaños de la barra, la bandeja, los chips, los márgenes y las separaciones
-  - Una sola fuente (Nerd Font monoespaciada) y los tamaños de letra de cada pieza
-  - Una paleta de colores única, hoy repartida entre los tonos de la barra y el gris cálido del terminal
-  - Bordes, esquinas, sombras, transparencias y desenfoque, también los de las ventanas desde Hyprland
+La estética es una **biblioteca antigua**: cuero, latón, madera y números romanos. Cada pieza tiene su boceto aprobado.
 
-**Próximas mejoras de la barra**
+- [ ] **Workspaces como lomos de libros**: 5 lomos de colores distintos (`spine1`…`spine5` en `Theme.qml`), con números romanos I–V; el lomo activo sobresale con un brillo dorado, sobre una balda de madera
+- [ ] **Panel del reproductor**: al pulsar el chip, un retrato con **marco** (carátula cuadrada: marco de madera con paspartú crema; vídeo 16:9: marco dorado clásico con remaches) y una **placa de latón** con el título (versalitas), el artista (cursiva), los controles anterior, pausa, siguiente y bucle (no repetir / repetir canción / repetir lista; el activo se enciende), la barra de progreso con su pomo y el icono de la fuente. Sin carátula, un disco dorado. La carátula sale de MPRIS (`trackArtUrl`). El chip de la barra mostrará solo canción y artista
+- [ ] **Volumen: perilla de latón con números romanos**: se abre al pulsar el chip; la perilla se arrastra, muestra el porcentaje y lleva un botón de silencio; la rueda del ratón sobre el chip se mantiene
+- [ ] **Red y Bluetooth: panel «medallón»**: un mismo panel con selector inferior Wi-Fi | Bluetooth. En el centro, un medallón de latón con el nombre y el estado (Conectada, Emparejado, Conectando…, Apagado) y un anillo de 24 marcas que se ilumina según la señal; alrededor, cinco fichas de cuero unidas por hilos de latón (Wi-Fi: banda, IP, escanear redes, seguridad y señal; Bluetooth: códec, tipo, escanear dispositivos, batería y señal). «Escanear» convierte las fichas en la lista de redes o dispositivos, y al elegir uno el medallón muestra «Conectando…». Un botón redondo de latón enciende y apaga. Las redes con candado pedirán la contraseña en una ficha extra. En la VM se probará con datos de ejemplo
+- [ ] **Calendario: agenda de cuero**, en dos fases: primero la parte visual (doble página de unos 640 px: el mes a la izquierda y la página del día a la derecha, con tareas, etiquetas, cinta marcapáginas y pestañas) y después la funcional, guardando los datos en `~/.local/share/pikson/agenda.json` (fuera del repositorio)
+- [ ] **Tarjeta de libros**: lo que estoy leyendo, con el porcentaje; los datos personales irían en `libros.json` (fuera del repositorio) con un `libros.example.json` de muestra
+- [ ] **Cola de canciones**: solo posible con la API web de Spotify (MPRIS no la expone), en hardware real
 
-- [ ] Volumen con **panel desplegable**: al pulsar el chip, una barra con un círculo que se arrastra al valor deseado, con el porcentaje, el botón de silenciar y el cierre al pulsar fuera (hoy se cambia con la rueda del ratón)
-- [ ] Chip de música simplificado: en la barra, solo canción y artista; al pulsarlo, un panel con el título completo, los controles (anterior, pausa y siguiente), el botón de bucle (no repetir, repetir canción o repetir lista) y la carátula o el icono de la fuente (Spotify, YouTube...)
-- [ ] Calendario interactivo (tipo Apple Calendar o Notion): pulsar un día y añadir eventos, etiquetas y tareas pendientes; hay que decidir dónde se guardan los datos (fichero local o sincronizado con un servicio)
+**Tema y estética**
+
+- [ ] Usar los tamaños y fuentes del tema en todas las piezas (`Theme.sizeText`, `Theme.sizeClock`) y poner el reloj en la fuente serif (`Theme.fontSerif`)
+- [ ] Fondo de pantalla de tonos cálidos, o tintar el actual hacia sepia
+- [ ] Comprobar en `hyprland.lua` las esquinas redondeadas de las ventanas (`rounding`, unos 14 para casar con `Theme.radius`) y la sombra (`0xee1a110d`)
+- [ ] Una única fuente de colores para Quickshell, kitty y Hyprland (hoy están copiados en tres sitios)
+- [ ] Desenfoque de las ventanas (es pesado en la VM)
+
+**Otras mejoras de la barra**
+
 - [ ] Tiempo (meteorología) en la barra
 - [ ] Panel de audio con salida y micrófono lado a lado, y silencio para cada uno
 - [ ] Panel de notificaciones con avisos emergentes e historial
 - [ ] Gestor de pantalla para elegir resolución, frecuencia y escala del monitor físico (hardware real)
+- [ ] Piezas nuevas: CPU y RAM, título de ventana activa y menú de apagado
 
 **Escritorio**
 
 - [ ] Máscara de entrada en la barra superior (que los huecos no bloqueen clics ni reserven espacio)
-- [ ] Fondo de pantalla: comprobar si ya queda centrado tras ajustar la escala; si no, revisar `hyprctl monitors` y `hyprctl layers`
+- [ ] Cerrar los paneles al pulsar fuera (red, calendario y los que vengan)
 - [ ] Distribución de las ventanas: Discord necesita ≈ 940 px de ancho; decidir entre Discord a pantalla completa en su propio workspace o una distribución con una ventana más ancha
-- [ ] Transparencia del resto de ventanas desde Hyprland, y bordes, esquinas redondeadas y desenfoque (el desenfoque es pesado en la VM)
 - [ ] Lanzador de aplicaciones
 - [ ] Gestor de archivos y diálogos de archivos de GTK (se ven mal en la VM)
 - [ ] Pantalla de bloqueo
-- [ ] Paleta ANSI de 16 colores en kitty
-
-**Barra y paneles**
-
-- [ ] Cerrar los paneles al pulsar fuera (red, calendario y los que vengan)
-- [ ] Pestañas Cable / Wi-Fi / Bluetooth en el panel de red, y diseño radial
 - [ ] Fusionar `net.sh` y `netinfo.sh` en un único script
 - [ ] Quitar el registro de depuración de la línea de arranque de Quickshell
-- [ ] Piezas nuevas: CPU y RAM, título de ventana activa y menú de apagado
 
 **Repositorio y hardware real**
 
 - [ ] Instalar Spotify de escritorio y probarlo (en la VM no dibuja ventana); el chip de música ya lo reconocerá
 - [ ] Frecuencia del monitor (165 Hz) y revisión de la escala del monitor
-- [ ] Probar el Wi-Fi y el Bluetooth (`bluez`, `bluez-utils`), y revisar el volumen y el silencio con el rango completo
+- [ ] Probar el Wi-Fi y el Bluetooth (`bluez`, `bluez-utils`) con el panel medallón, y revisar el volumen y el silencio con el rango completo
+- [ ] Regenerar `pkglist.txt` y `aur-pkglist.txt` (debe aparecer `ttf-cormorant`)
 - [ ] GNU Stow para enlazar configuraciones (incluidos `zsh/.zshrc` y `zsh/.zprofile`)
 - [ ] Script `install.sh` que automatice este manual
 - [ ] Probar el manual completo en una VM limpia
