@@ -1980,4 +1980,3 @@ La idea es un USB booteable, como el de Windows 10 o el de Arch, pero que **inst
 - [ ] 4. Construir la ISO con **archiso** (perfil `releng` más la lista de paquetes y el instalador). Decidir entre instalación **online** (ISO pequeña que descarga al instalar; los paquetes del AUR se compilan o se sirven desde un repositorio propio) y **offline** (ISO grande con todo, con el AUR compilado antes en un repositorio local)
 - [ ] 5. Grabarla con `dd` en un USB y probarla primero en una VM limpia y luego en hardware real (Wi-Fi, Bluetooth, tarjeta gráfica, UEFI). El *Secure Boot* no funciona con estas ISO
 
-> ⚠️ Cuidados: no meter tokens (`gh`), contraseñas ni datos personales en la imagen; Arch es de actualización continua, así que la ISO caduca y hay que reconstruirla de vez en cuando; y lo ajustado a la VM no debe llegar a equipos reales.
