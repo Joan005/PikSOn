@@ -23,7 +23,7 @@ Singleton {
     readonly property int radiusSmall: 8
 
     // tipografías
-    readonly property string fontSerif: "Cormorant Garamond"
+    readonly property string fontSerif: "JetBrainsMono Nerd Font"
     readonly property string fontUi: "JetBrainsMono Nerd Font"
     readonly property string fontIcons: "JetBrainsMono Nerd Font"
 

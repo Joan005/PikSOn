@@ -6,24 +6,16 @@ PopupWindow {
     id: panel
 
     property var player: null
+    property var lyr: null
+    property bool floating: false
     property real dragFrac: -1
 
-    readonly property bool hasArt: art.status === Image.Ready
-    readonly property bool wide: hasArt && art.implicitWidth / Math.max(1, art.implicitHeight) > 1.3
+    signal floatToggled()
+
     readonly property bool hasLength: player !== null && player.lengthSupported && player.length > 0
     readonly property real frac: dragFrac >= 0 ? dragFrac : (hasLength ? Math.min(1, Math.max(0, player.position / player.length)) : 0)
     readonly property bool loopOn: player !== null && player.loopSupported && player.loopState !== MprisLoopState.None
-
-    function sourceIcon() {
-        if (!panel.player)
-            return "\uf001"
-        var n = panel.player.identity || ""
-        if (n === "Spotify")
-            return "\uf1bc"
-        if (n.indexOf("Brave") >= 0 || n.indexOf("Chrom") >= 0 || n.indexOf("Firefox") >= 0)
-            return "\uf16a"
-        return "\uf001"
-    }
+    readonly property bool hasArt: art.status === Image.Ready
 
     function fmt(s) {
         var t = Math.max(0, Math.floor(s))
@@ -44,14 +36,22 @@ PopupWindow {
     }
 
     Timer {
-        interval: 500
-        repeat: true
-        running: panel.visible && panel.player !== null && panel.player.isPlaying
-        onTriggered: panel.player.positionChanged()
+        id: hold
+        interval: 800
+        onTriggered: panel.dragFrac = -1
     }
 
-    implicitWidth: 300
-    implicitHeight: col.implicitHeight + 28
+    Timer {
+        id: applySeek
+        interval: 120
+        onTriggered: {
+            if (panel.player && panel.player.canSeek && panel.hasLength)
+                panel.player.position = panel.dragFrac * panel.player.length
+        }
+    }
+
+    implicitWidth: 340
+    implicitHeight: content.implicitHeight + 32
     color: "transparent"
 
     Rectangle {
@@ -62,340 +62,345 @@ PopupWindow {
         border.width: 1
 
         Column {
-            id: col
+            id: content
             anchors.top: parent.top
-            anchors.topMargin: 14
-            anchors.horizontalCenter: parent.horizontalCenter
-            spacing: 12
+            anchors.topMargin: 16
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.leftMargin: 16
+            anchors.rightMargin: 16
+            spacing: 14
 
-            Rectangle {
-                id: frame
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: panel.wide ? 272 : 232
-                height: panel.wide ? 166 : 232
-                radius: 4
-                color: panel.wide ? "#b8913f" : Theme.wood
-                border.color: panel.wide ? "#e9c978" : "#4a3322"
-                border.width: 2
+            Row {
+                width: parent.width
+                spacing: 12
 
                 Rectangle {
-                    anchors.fill: parent
-                    anchors.margins: panel.wide ? 8 : 12
-                    color: panel.wide ? "#2a1d12" : "#ece0c4"
-                    border.color: "#55000000"
+                    width: 68
+                    height: 68
+                    radius: 4
+                    color: "#241811"
+                    border.color: Theme.accent
                     border.width: 1
+                    clip: true
+
+                    Image {
+                        id: art
+                        anchors.fill: parent
+                        anchors.margins: 1
+                        source: panel.player ? panel.player.trackArtUrl : ""
+                        fillMode: Image.PreserveAspectCrop
+                        asynchronous: true
+                        visible: status === Image.Ready
+                    }
 
                     Item {
-                        id: artBox
                         anchors.fill: parent
-                        anchors.margins: panel.wide ? 3 : 10
-                        clip: true
+                        visible: !panel.hasArt
 
-                        Image {
-                            id: art
-                            anchors.fill: parent
-                            source: panel.player ? panel.player.trackArtUrl : ""
-                            fillMode: Image.PreserveAspectCrop
-                            asynchronous: true
-                            visible: status === Image.Ready
-                        }
-
-                        Item {
-                            anchors.fill: parent
-                            visible: !panel.hasArt
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 48
+                            height: 48
+                            radius: 24
+                            color: Theme.accent
+                            border.color: "#a9803a"
+                            border.width: 2
 
                             Rectangle {
                                 anchors.centerIn: parent
-                                width: Math.min(parent.width, parent.height) - 16
-                                height: width
-                                radius: width / 2
-                                color: Theme.accent
+                                width: 30
+                                height: 30
+                                radius: 15
+                                color: "transparent"
                                 border.color: "#a9803a"
-                                border.width: 3
+                                border.width: 1
+                            }
 
-                                Rectangle {
-                                    anchors.centerIn: parent
-                                    width: parent.width * 0.62
-                                    height: width
-                                    radius: width / 2
-                                    color: "transparent"
-                                    border.color: "#a9803a"
-                                    border.width: 1
-                                }
-
-                                Rectangle {
-                                    anchors.centerIn: parent
-                                    width: parent.width * 0.2
-                                    height: width
-                                    radius: width / 2
-                                    color: Theme.fgOnAccent
-                                }
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: 10
+                                height: 10
+                                radius: 5
+                                color: Theme.fgOnAccent
                             }
                         }
                     }
                 }
 
-                Repeater {
-                    model: panel.wide ? 4 : 0
+                Column {
+                    width: parent.width - 68 - 12
+                    spacing: 3
 
-                    delegate: Rectangle {
-                        required property int index
+                    Text {
+                        width: parent.width
+                        text: panel.player ? (panel.player.trackTitle || "") : ""
+                        wrapMode: Text.WordWrap
+                        maximumLineCount: 2
+                        elide: Text.ElideRight
+                        color: Theme.fg
+                        font.family: Theme.fontUi
+                        font.pixelSize: 13
+                        font.bold: true
+                    }
 
-                        x: index % 2 === 1 ? frame.width - 9 : 3
-                        y: index > 1 ? frame.height - 9 : 3
-                        width: 6
-                        height: 6
-                        radius: 3
-                        color: "#7a5a1f"
+                    Text {
+                        width: parent.width
+                        text: panel.player ? (panel.player.trackArtist || "") : ""
+                        elide: Text.ElideRight
+                        color: Theme.fgMuted
+                        font.family: Theme.fontUi
+                        font.pixelSize: 12
+                    }
+
+                    Text {
+                        width: parent.width
+                        text: panel.player ? (panel.player.identity || "") : ""
+                        elide: Text.ElideRight
+                        color: Theme.fgMuted
+                        opacity: 0.7
+                        font.family: Theme.fontUi
+                        font.pixelSize: 10
+                    }
+                }
+            }
+
+            Column {
+                width: parent.width
+                spacing: 2
+                visible: panel.hasLength
+
+                ThinSlider {
+                    width: parent.width
+                    value: panel.frac
+                    onMoved: (v) => {
+                        panel.dragFrac = v
+                        hold.restart()
+                        applySeek.restart()
+                    }
+                }
+
+                Item {
+                    width: parent.width
+                    height: 14
+
+                    Text {
+                        anchors.left: parent.left
+                        text: panel.fmt(panel.hasLength ? panel.frac * panel.player.length : 0)
+                        color: Theme.fgMuted
+                        font.family: Theme.fontUi
+                        font.pixelSize: 10
+                    }
+
+                    Text {
+                        anchors.right: parent.right
+                        text: panel.fmt(panel.hasLength ? panel.player.length : 0)
+                        color: Theme.fgMuted
+                        font.family: Theme.fontUi
+                        font.pixelSize: 10
+                    }
+                }
+            }
+
+            Item {
+                width: parent.width
+                height: 44
+
+                Row {
+                    anchors.centerIn: parent
+                    spacing: 14
+
+                    Item {
+                        width: 34
+                        height: 44
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "\uf048"
+                            color: prevArea.containsMouse ? Theme.accent : Theme.fg
+                            font.family: Theme.fontIcons
+                            font.pixelSize: 14
+                        }
+
+                        MouseArea {
+                            id: prevArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            onClicked: if (panel.player) panel.player.previous()
+                        }
+                    }
+
+                    Item {
+                        width: 44
+                        height: 44
+
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 38
+                            height: 38
+                            radius: 19
+                            color: playArea.containsMouse ? "#22e2b564" : "transparent"
+                            border.color: Theme.accent
+                            border.width: 1
+                        }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: panel.player && panel.player.isPlaying ? "\uf04c" : "\uf04b"
+                            color: Theme.accent
+                            font.family: Theme.fontIcons
+                            font.pixelSize: 14
+                        }
+
+                        MouseArea {
+                            id: playArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            onClicked: if (panel.player) panel.player.togglePlaying()
+                        }
+                    }
+
+                    Item {
+                        width: 34
+                        height: 44
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "\uf051"
+                            color: nextArea.containsMouse ? Theme.accent : Theme.fg
+                            font.family: Theme.fontIcons
+                            font.pixelSize: 14
+                        }
+
+                        MouseArea {
+                            id: nextArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            onClicked: if (panel.player) panel.player.next()
+                        }
+                    }
+
+                    Item {
+                        width: 34
+                        height: 44
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: "\uf01e"
+                            color: panel.loopOn || loopArea.containsMouse ? Theme.accent : Theme.fg
+                            opacity: panel.player && panel.player.loopSupported ? 1 : 0.35
+                            font.family: Theme.fontIcons
+                            font.pixelSize: 14
+                        }
+
+                        Text {
+                            anchors.right: parent.right
+                            anchors.rightMargin: 3
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: 8
+                            text: "1"
+                            color: Theme.accent
+                            font.family: Theme.fontUi
+                            font.pixelSize: 9
+                            font.bold: true
+                            visible: panel.player !== null && panel.player.loopSupported && panel.player.loopState === MprisLoopState.Track
+                        }
+
+                        MouseArea {
+                            id: loopArea
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            onClicked: panel.nextLoop()
+                        }
                     }
                 }
             }
 
             Rectangle {
-                anchors.horizontalCenter: parent.horizontalCenter
-                width: frame.width
-                height: plateCol.implicitHeight + 24
-                radius: 4
-                border.color: "#7a5a1f"
-                border.width: 1
+                width: parent.width
+                height: 1
+                color: Theme.line
+                opacity: 0.45
+            }
 
-                gradient: Gradient {
-                    GradientStop { position: 0.0; color: "#f0d08a" }
-                    GradientStop { position: 1.0; color: "#b98d3f" }
+            Item {
+                width: parent.width
+                height: 18
+
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "Letra"
+                    color: Theme.accent
+                    font.family: Theme.fontUi
+                    font.pixelSize: 11
+                    font.bold: true
                 }
 
-                Column {
-                    id: plateCol
-                    anchors.top: parent.top
-                    anchors.topMargin: 12
-                    anchors.left: parent.left
+                Text {
                     anchors.right: parent.right
-                    anchors.leftMargin: 14
-                    anchors.rightMargin: 14
-                    spacing: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: panel.floating ? "\uf066" : "\uf08e"
+                    color: floatArea.containsMouse ? Theme.accent : Theme.fgMuted
+                    font.family: Theme.fontIcons
+                    font.pixelSize: 13
 
-                    Item {
-                        width: parent.width
-                        height: textCol.implicitHeight
-
-                        Column {
-                            id: textCol
-                            anchors.left: parent.left
-                            anchors.right: srcIcon.left
-                            anchors.rightMargin: 8
-                            spacing: 2
-
-                            Text {
-                                width: parent.width
-                                text: panel.player ? (panel.player.trackTitle || "") : ""
-                                wrapMode: Text.WordWrap
-                                maximumLineCount: 2
-                                elide: Text.ElideRight
-                                color: Theme.fgOnAccent
-                                font.family: Theme.fontSerif
-                                font.pixelSize: 17
-                                font.bold: true
-                                font.capitalization: Font.SmallCaps
-                            }
-
-                            Text {
-                                width: parent.width
-                                text: panel.player ? (panel.player.trackArtist || "") : ""
-                                elide: Text.ElideRight
-                                color: "#5a3d1c"
-                                font.family: Theme.fontSerif
-                                font.pixelSize: 14
-                                font.italic: true
-                            }
-                        }
-
-                        Text {
-                            id: srcIcon
-                            anchors.right: parent.right
-                            anchors.verticalCenter: parent.verticalCenter
-                            text: panel.sourceIcon()
-                            color: Theme.fgOnAccent
-                            font.family: Theme.fontIcons
-                            font.pixelSize: 20
-                        }
+                    MouseArea {
+                        id: floatArea
+                        anchors.fill: parent
+                        anchors.margins: -6
+                        hoverEnabled: true
+                        onClicked: panel.floatToggled()
                     }
+                }
+            }
 
-                    Item {
-                        width: parent.width
-                        height: 30
-                        visible: panel.hasLength
+            Item {
+                width: parent.width
+                height: panel.floating ? 44 : 120
 
-                        Rectangle {
-                            id: groove
-                            anchors.left: parent.left
-                            anchors.right: parent.right
-                            y: 6
-                            height: 6
-                            radius: 3
-                            color: "#c99d4a"
-                            border.color: "#7a5a1f"
-                            border.width: 1
+                Text {
+                    anchors.centerIn: parent
+                    width: parent.width - 16
+                    horizontalAlignment: Text.AlignHCenter
+                    wrapMode: Text.WordWrap
+                    visible: panel.floating || !panel.lyr || panel.lyr.status !== "ok"
+                    text: panel.floating ? "La letra está en la ventana flotante." : (panel.lyr && panel.lyr.status === "loading" ? "Buscando la letra…" : "Sin letra para esta canción.")
+                    color: Theme.fgMuted
+                    font.family: Theme.fontUi
+                    font.pixelSize: 11
+                }
 
-                            Rectangle {
-                                width: groove.width * panel.frac
-                                height: parent.height
-                                radius: 3
-                                color: "#5a3d1c"
-                            }
-                        }
+                ListView {
+                    id: lv
+                    anchors.fill: parent
+                    clip: true
+                    interactive: false
+                    visible: !panel.floating && panel.lyr !== null && panel.lyr.status === "ok"
+                    model: panel.lyr ? panel.lyr.lines : []
+                    currentIndex: panel.lyr ? panel.lyr.curLine : 0
+                    highlightRangeMode: ListView.ApplyRange
+                    preferredHighlightBegin: height / 2 - 12
+                    preferredHighlightEnd: height / 2 + 12
+                    highlightMoveDuration: 250
 
-                        Rectangle {
-                            x: groove.width * panel.frac - 7
-                            y: 2
-                            width: 14
-                            height: 14
-                            radius: 7
-                            color: Theme.fgOnAccent
-                            border.color: "#f0d08a"
-                            border.width: 2
-                        }
+                    delegate: Item {
+                        required property var modelData
+                        required property int index
 
-                        Text {
-                            anchors.left: parent.left
-                            y: 17
-                            text: panel.fmt(panel.hasLength ? panel.frac * panel.player.length : 0)
-                            color: "#5a3d1c"
-                            font.family: Theme.fontUi
-                            font.pixelSize: 10
-                        }
+                        width: lv.width
+                        height: 24
 
                         Text {
-                            anchors.right: parent.right
-                            y: 17
-                            text: panel.fmt(panel.hasLength ? panel.player.length : 0)
-                            color: "#5a3d1c"
-                            font.family: Theme.fontUi
-                            font.pixelSize: 10
-                        }
-
-                        MouseArea {
-                            anchors.fill: parent
-                            onPressed: (mouse) => panel.dragFrac = Math.min(1, Math.max(0, mouse.x / width))
-                            onPositionChanged: (mouse) => {
-                                if (pressed)
-                                    panel.dragFrac = Math.min(1, Math.max(0, mouse.x / width))
-                            }
-                            onReleased: {
-                                if (panel.player && panel.player.canSeek && panel.dragFrac >= 0)
-                                    panel.player.position = panel.dragFrac * panel.player.length
-                                panel.dragFrac = -1
-                            }
-                        }
-                    }
-
-                    Item {
-                        width: parent.width
-                        height: 40
-
-                        Row {
                             anchors.centerIn: parent
-                            spacing: 12
-
-                            Item {
-                                width: 32
-                                height: 40
-
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: "\uf048"
-                                    color: Theme.fgOnAccent
-                                    font.family: Theme.fontIcons
-                                    font.pixelSize: 15
-                                }
-
-                                MouseArea {
-                                    anchors.fill: parent
-                                    onClicked: if (panel.player) panel.player.previous()
-                                }
-                            }
-
-                            Item {
-                                width: 40
-                                height: 40
-
-                                Rectangle {
-                                    anchors.centerIn: parent
-                                    width: 36
-                                    height: 36
-                                    radius: 18
-                                    color: Theme.fgOnAccent
-                                }
-
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: panel.player && panel.player.isPlaying ? "\uf04c" : "\uf04b"
-                                    color: "#f0d08a"
-                                    font.family: Theme.fontIcons
-                                    font.pixelSize: 15
-                                }
-
-                                MouseArea {
-                                    anchors.fill: parent
-                                    onClicked: if (panel.player) panel.player.togglePlaying()
-                                }
-                            }
-
-                            Item {
-                                width: 32
-                                height: 40
-
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: "\uf051"
-                                    color: Theme.fgOnAccent
-                                    font.family: Theme.fontIcons
-                                    font.pixelSize: 15
-                                }
-
-                                MouseArea {
-                                    anchors.fill: parent
-                                    onClicked: if (panel.player) panel.player.next()
-                                }
-                            }
-
-                            Item {
-                                width: 32
-                                height: 40
-
-                                Rectangle {
-                                    anchors.centerIn: parent
-                                    width: 28
-                                    height: 28
-                                    radius: 14
-                                    color: "#5a3d1c"
-                                    visible: panel.loopOn
-                                }
-
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: "\uf01e"
-                                    color: panel.loopOn ? "#f0d08a" : Theme.fgOnAccent
-                                    opacity: panel.player && panel.player.loopSupported ? 1 : 0.35
-                                    font.family: Theme.fontIcons
-                                    font.pixelSize: 14
-                                }
-
-                                Text {
-                                    anchors.right: parent.right
-                                    anchors.bottom: parent.bottom
-                                    anchors.bottomMargin: 6
-                                    text: "1"
-                                    color: "#f0d08a"
-                                    font.pixelSize: 9
-                                    font.bold: true
-                                    visible: panel.player !== null && panel.player.loopSupported && panel.player.loopState === MprisLoopState.Track
-                                }
-
-                                MouseArea {
-                                    anchors.fill: parent
-                                    onClicked: panel.nextLoop()
-                                }
-                            }
+                            width: parent.width - 8
+                            horizontalAlignment: Text.AlignHCenter
+                            elide: Text.ElideRight
+                            text: parent.modelData.text
+                            color: panel.lyr && parent.index === panel.lyr.curLine ? Theme.accent : Theme.fgMuted
+                            opacity: panel.lyr && parent.index === panel.lyr.curLine ? 1 : 0.65
+                            font.family: Theme.fontUi
+                            font.pixelSize: panel.lyr && parent.index === panel.lyr.curLine ? 12 : 11
+                            font.bold: panel.lyr && parent.index === panel.lyr.curLine
                         }
                     }
                 }

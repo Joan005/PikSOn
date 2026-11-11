@@ -37,9 +37,7 @@ Rectangle {
 	height: 32
 	width: row.implicitWidth + 20
 	radius: Theme.radius
-	color: Theme.bgChip
-	border.color: Theme.line
-	border.width: 1
+	color: "transparent"
 
 	Row {
 		id: row
@@ -111,7 +109,7 @@ Rectangle {
 				elide: Text.ElideRight
 				color: Theme.fg
 				font.pixelSize: 12
-				text: chip.shortText()
+				font.family: Theme.fontUi; text: chip.shortText()
 			}
 			MouseArea {
 				anchors.fill: parent
