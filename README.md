@@ -23,9 +23,11 @@ PikSOn/
         ├── Theme.qml        # Tema: colores, tamaños y fuentes (singleton)
         ├── Wallpaper.qml    # Fondo de pantalla
         ├── wallpaper.jpg    # Imagen del fondo
-        ├── Bar.qml          # Barra superior (5 workspaces, música, reloj, volumen, chip y panel de red)
+        ├── Bar.qml          # Barra superior (workspaces como lomos de libros, música, reloj, volumen y red)
         ├── Player.qml       # Chip de música de la barra (cualquier reproductor MPRIS)
-        ├── Calendar.qml     # Calendario desplegable del reloj
+        ├── PlayerPanel.qml  # Panel del reproductor: marco, placa de latón, progreso y controles
+        ├── NetPanel.qml     # Panel de red y Bluetooth: el medallón
+        ├── Calendar.qml     # Agenda de cuero desplegable del reloj
         ├── Dock.qml         # Panel lateral: bandeja del sistema (apps en segundo plano)
         └── scripts/
             ├── net.sh       # Resumen de red para el chip (debe ser ejecutable)
@@ -42,7 +44,7 @@ PikSOn/
 | `zsh/.zprofile` | Lanza Hyprland al iniciar sesión en el TTY1 |
 | `.config/hypr/` | Configuración de Hyprland, incluidos el monitor, los atajos, los bordes y el cursor |
 | `.config/kitty/` | Configuración del terminal |
-| `.config/quickshell/` | Tema, barra superior, chip de música, calendario, bandeja del sistema, fondo y scripts de apoyo |
+| `.config/quickshell/` | Tema, barra superior, chip y panel del reproductor, panel de red, agenda, bandeja del sistema, fondo y scripts de apoyo |
 
 > 💡 Las carpetas de `.config/` replican la ruta que tendrían en `~/.config`. `zsh/` está fuera porque `.zshrc` y `.zprofile` viven en la carpeta personal; con GNU Stow se enlazarán automáticamente.
 
@@ -57,7 +59,7 @@ PikSOn/
 6. [Editor de texto](#s6)
 7. [Navegador Brave y atajo de teclado](#s7)
 8. [Atajos de teclado personalizados](#s8)
-9. [Quickshell: barra, panel lateral y fondo](#s9)
+9. [Quickshell: barra, paneles y fondo](#s9)
 10. [Programas instalados](#s10)
 11. [Git y GitHub](#s11)
 12. [Herramientas de apoyo](#s12)
@@ -201,6 +203,8 @@ sudo systemctl enable --now vboxservice
 > 💡 **Spotify de escritorio no dibuja su ventana en la VM** (el proceso arranca, pero no aparece ventana ni se anuncia): es una limitación de la máquina virtual sin GPU. Ver [9.11](#911-chip-de-música-en-la-barra) para cómo se prueba el chip de música sin él.
 
 > 💡 **La pantalla de la VM solo ofrece 60 Hz** (VirtualBox no expone otras frecuencias), aunque el monitor real vaya a más. Y la escala automática de Hyprland sale demasiado alta (1,67) y recorta las aplicaciones: ver [el apartado 8](#otros-ajustes-de-hyprlandlua-monitor-escala-y-frecuencia).
+
+> 💡 Con el renderizado por software de la VM, las animaciones continuas pueden verse entrecortadas y gastar CPU: en hardware real irán fluidas ([apartado 14](#s14)).
 
 ---
 
@@ -413,9 +417,35 @@ echo "set linenumbers" >> $HOME/.nanorc
 
 Para ir directamente a una línea: `Ctrl + _` (barra baja), el número y `Enter`.
 
+Para ver un fichero con sus números de línea **sin abrirlo**, y solo un tramo:
+
+```bash
+cat -n $HOME/.config/quickshell/Bar.qml | sed -n '124,190p'
+```
+
 ### Buscar y reemplazar
 
 `Ctrl + \` pide el texto a buscar y el que lo sustituye. Con `A` en la pregunta de cada coincidencia se reemplazan **todas** de una vez. Es la forma más cómoda de cambiar un valor repetido por muchas líneas (por ejemplo, un color por `Theme.fg`).
+
+> 💡 Si en «Replace with» se pulsa `Enter` **sin escribir nada**, el texto buscado se **borra**. Es la forma rápida de quitar una línea concreta.
+
+> 💡 La búsqueda **no distingue mayúsculas de minúsculas** y encuentra el texto aunque sea parte de otro más largo (`height: 28` también casaría con `implicitHeight: 28`). Para saber cuántas coincidencias habrá, conviene contarlas antes con `grep -n "texto" fichero`.
+
+### Cortar o sustituir un bloque de líneas
+
+| Paso | Atajo |
+|---|---|
+| Ir a la primera línea del bloque | `Ctrl + _`, el número y `Enter`; después `Home` |
+| Marcar el inicio de la selección | `Alt + A` |
+| Extender la selección | La flecha `↓` tantas veces como líneas tenga el bloque |
+| Cortar la selección | `Ctrl + K` |
+| Abrir una línea nueva **debajo** de otra | Ir a esa línea, `End` y `Enter` |
+
+> 💡 **Trabaja de abajo hacia arriba.** Al borrar o añadir líneas, los números de las que quedan por debajo cambian; si se editan primero las de más abajo, los números de las de arriba siguen valiendo.
+
+> 💡 Al **sustituir** un bloque cortado por otro tecleado, termina el bloque nuevo con `Enter`: así la llave de cierre que había debajo queda en su propia línea y no pegada a la última del bloque.
+
+> 💡 Al teclear bloques QML con la sangría automática desactivada (`Alt + I`), se escriben **sin sangría**: a QML no le importa, y se evitan errores al teclear.
 
 ---
 
@@ -556,9 +586,9 @@ hl.config({
 ---
 
 <a id="s9"></a>
-## 9. 🧩 Quickshell: barra, panel lateral y fondo
+## 9. 🧩 Quickshell: barra, paneles y fondo
 
-**Quickshell** es un kit para construir la interfaz del escritorio (barras, paneles, widgets) con QML. Aquí se usa para una barra superior (con un chip de música y un reloj con calendario), un panel lateral que hace de **bandeja del sistema** (las aplicaciones que siguen abiertas en segundo plano) y el fondo de pantalla. Todos comparten colores, tamaños y fuentes a través de un **tema** ([9.13](#913-tema-themeqml)).
+**Quickshell** es un kit para construir la interfaz del escritorio (barras, paneles, widgets) con QML. Aquí se usa para una barra superior (con los workspaces como lomos de libros, un chip de música y un reloj con agenda), tres paneles desplegables (reproductor, red y agenda), un panel lateral que hace de **bandeja del sistema** (las aplicaciones que siguen abiertas en segundo plano) y el fondo de pantalla. Todos comparten colores, tamaños y fuentes a través de un **tema** ([9.13](#913-tema-themeqml)).
 
 ### 9.1 Instalación
 
@@ -577,9 +607,11 @@ La configuración vive en `~/.config/quickshell/` y se divide en piezas:
 | `Theme.qml` | El tema: paleta, tamaños y fuentes, compartidos por todas las piezas ([9.13](#913-tema-themeqml)) |
 | `Wallpaper.qml` | Fondo de pantalla (una ventana en la capa `Background`) |
 | `wallpaper.jpg` | La imagen del fondo |
-| `Bar.qml` | Barra superior: contenedor fijo de 5 workspaces, chip de música, reloj (con calendario desplegable), chips de volumen y de red y panel desplegable de red |
+| `Bar.qml` | Barra superior: contenedor fijo con los workspaces como lomos, chip de música, reloj (con la agenda desplegable), chips de volumen y de red, y los paneles de reproductor y de red |
 | `Player.qml` | Chip de música de la barra: canción que suena y botones anterior, pausa y siguiente ([9.11](#911-chip-de-música-en-la-barra)) |
-| `Calendar.qml` | Calendario desplegable que se abre al pulsar el reloj ([9.12](#912-calendario-del-reloj)) |
+| `PlayerPanel.qml` | Panel del reproductor: marco, placa de latón, progreso y controles ([9.14](#914-panel-del-reproductor)) |
+| `NetPanel.qml` | Panel de red y Bluetooth, el medallón ([9.7](#97-panel-de-red-el-medallón)) |
+| `Calendar.qml` | Agenda de cuero que se abre al pulsar el reloj ([9.12](#912-agenda-de-cuero-del-reloj)) |
 | `Dock.qml` | Panel lateral derecho = **bandeja del sistema**: muestra solo las apps que siguen abiertas en segundo plano ([9.4](#94-bandeja-del-sistema-panel-lateral)) |
 | `scripts/net.sh` | Resumen de la red para el chip (`tipo\|dispositivo\|ip`) |
 | `scripts/netinfo.sh` | Detalle de la red para el panel desplegable (`clave=valor`) |
@@ -607,9 +639,11 @@ qs
 
 Quickshell **recarga solo** al guardar un fichero. Si hay un error, aparece una ventana con la línea y el motivo.
 
-> 💡 Los recuadros numerados de la izquierda de la barra son los **workspaces** (escritorios virtuales) de Hyprland. Solo hay **5**; un clic sobre el número cambia de escritorio.
+> 💡 **Los workspaces son lomos de libros.** En la izquierda de la barra, cada workspace que existe es un lomo de 22 px de ancho con su **número romano** (I a V) y dos bandas doradas, sobre una balda de madera. El lomo del workspace activo es más alto (25 px frente a 20) y lleva borde dorado; un clic sobre cualquiera cambia de escritorio. Solo hay **5**. Los cinco colores (burdeos, azul petróleo, ocre, ciruela y cuero) están en `Theme.spines` y se asignan por posición: `Theme.spines[((id - 1) % 5 + 5) % 5]`.
 
-> 💡 Los workspaces van dentro de un **contenedor oscuro de anchura fija** (152 px), calculada para 5 recuadros: `5 × 24 px + 4 × 5 px de separación + 12 px de margen interior`. Así el espacio queda reservado aunque solo exista un workspace, y las piezas que se añadan a su derecha no se desplazan. El número de recuadros es la propiedad **`slots`** de `wsBox` en `Bar.qml` (`cell` es el tamaño de cada recuadro y `gap` la separación): al cambiarla, el contenedor se recalcula solo. Para anclar otra pieza junto a él, se usa `anchors.left: wsBox.right` (así está colocado el chip de música). El workspace activo se resalta con `Theme.accent`.
+> 💡 Los lomos van dentro de un **contenedor oscuro de anchura fija** (152 px), calculada para 5 lomos: `5 × 24 px + 4 × 5 px de separación + 12 px de margen interior`. Así el espacio queda reservado aunque solo exista un workspace, y las piezas que se añadan a su derecha no se desplazan. El número de lomos es la propiedad **`slots`** de `wsBox` en `Bar.qml` (`cell` es el ancho de cada lomo y `gap` la separación): al cambiarla, el contenedor se recalcula solo. Para anclar otra pieza junto a él, se usa `anchors.left: wsBox.right` (así está colocado el chip de música). La balda es un pequeño rectángulo de madera (`Theme.wood`) en el borde inferior del contenedor, y la fila de lomos se apoya en ella (`anchors.bottom` con un margen de 5 px). La barra solo muestra los workspaces que **existen**: aparecen conforme se usan con `Super + 1…5`.
+
+> 💡 **Alturas.** La ventana de la barra mide **40 px** (`implicitHeight` en `Bar.qml`) y los chips (volumen, red, música) y el contenedor de lomos miden **32 px**, todos iguales. Si algo se ve «achatado» o apretado, esos son los números que hay que tocar: la ventana en `Bar.qml` y la altura de cada chip en su bloque (`Player.qml` para el de música).
 
 > 💡 El panel lateral (`Dock.qml`) está anclado arriba, a la derecha y abajo: así reserva una franja de 34 px y las ventanas no pasan por debajo de los iconos. Quickshell ya descuenta el espacio de la barra superior, por lo que no hace falta ningún margen manual arriba.
 
@@ -723,8 +757,9 @@ Si al editar un `.qml` aparece la ventana **"Config reload failed"**:
 - Si el mismo error se repite tras editar, probablemente **el fichero no ha cambiado**: comprueba su contenido con `head -3` o `cat -n fichero | sed -n '30,52p'`.
 - Los avisos amarillos (`WARN ... ReferenceError`, `TypeError`) no impiden cargar, pero señalan una errata que rompe una función. Se ven con `qs log`.
 - Cuando el aviso dice **"is not a type"**, compara letra por letra con una línea idéntica que sí funcione: `Stdio` y `Studio`, o `Rectangle` y `Rectagle`, se parecen demasiado a simple vista.
-- Un fichero `.qml` que ninguna pieza usa todavía **no se comprueba**: sus erratas solo aparecen cuando otro fichero lo carga (por ejemplo, `Player.qml` hasta que `Bar.qml` incluye `Player {}`, o `Calendar.qml` hasta que `Bar.qml` incluye `Calendar {}`).
+- Un fichero `.qml` que ninguna pieza usa todavía **no se comprueba**: sus erratas solo aparecen cuando otro fichero lo carga (por ejemplo, `Player.qml` hasta que `Bar.qml` incluye `Player {}`, o `PlayerPanel.qml` y `NetPanel.qml` hasta que `Bar.qml` incluye sus bloques).
 - Al **añadir** una línea con nano, comprueba que no **sustituyes** la que había (por ejemplo, al añadir `calOpen` se perdió `netOpen`).
+- Cuando un error cita **una línea justo después de un bloque que acabas de pegar o teclear**, cuenta las llaves de cierre: lo más probable es que sobre o falte una.
 
 Erratas reales encontradas al montar esta configuración:
 
@@ -744,9 +779,11 @@ Erratas reales encontradas al montar esta configuración:
 | `Incomplete binding, expected ':' or '{'` | Propiedad sin los dos puntos: `anchors.left.wsBox.right` | `anchors.left: wsBox.right` |
 | `Expected token ','` (en `acceptedButtons`) | Texto duplicado al pegar: `Qt.LeftButtons: Qt.LeftButton \| ...` | `acceptedButtons: Qt.LeftButton \| Qt.RightButton` |
 | `Cannot assign to non-existent property "margin"` | Falta la `s` | `anchors.margins` |
+| `Cannot assign to non-existent property "boder"` | Falta la `r` en `border.color` | `border.color` |
 | `Cannot assign to non-existent property "onNetOpenChanged"` | Se borró `property bool netOpen: false` al añadir `calOpen` | Deben existir **las dos** propiedades |
 | `Cannot assign a value to a signal (use 'on<Signal>: ...')` en `Theme.qml` | Una propiedad llamada `onAccent`: QML trata cualquier nombre `on` + mayúscula como un manejador de señal | Renombrarla (`fgOnAccent`) en `Theme.qml` y en todos los sitios donde se use |
 | `Invalid property assignment: color expected` | Color sin almohadilla (`"89b4fa"`) | `"#89b4fa"` |
+| Un círculo o un fondo sale **rosa** en lugar de dorado | El color se escribió como `#e2b56499`, que QML lee con el alfa **delante** (`e2`) y el color `b56499` | `#99e2b564` (en QML el alfa va primero) |
 | `Property 'strings' ... is not a function` | Nombre inventado | `substring` |
 | `ReferenceError: i2 is not defined` | Se usa una variable que no se declaró (`i2` por `i1`) | El nombre declarado |
 | `panelWindth is not defined` | Errata | `panelWidth` |
@@ -757,10 +794,13 @@ Erratas reales encontradas al montar esta configuración:
 | Un icono de la bandeja sale duplicado | Bloque `IconImage` repetido al pegar | Dejar uno solo |
 | El chip de música no se coloca junto a los workspaces | El bloque `Player {}` quedó **dentro** del `Rectangle` del `wsBox` | Ponerlo fuera, justo encima, al mismo nivel |
 | Un botón del chip de música sale como un cuadro vacío | Código de icono mal escrito (`"\uf4b"` por `"\uf04b"`) | Cuatro cifras tras `\u` |
+| Un icono sale como un **rombo** o un recuadro | El código no existe en la fuente (por ejemplo, `\uf167` para YouTube) | Probarlo antes con `printf '\uf16a\n'` en kitty y usar otro código (`\uf16a`) |
 | El chip de música sigue mostrando el texto largo | La etiqueta no usa la función | `text: chip.shortText()` |
 | `impicitWidth` no existe | Falta una `l` | `implicitWidth` |
 | Al pulsar en **cualquier sitio** de la barra se abre el calendario, y los chips dejan de responder | El `MouseArea` del reloj quedó **fuera** del `Text` (con `anchors.fill: parent` cubre toda la barra) | Colocarlo **dentro** del `Text` del reloj, antes de su `}` |
+| `Syntax error` en la primera línea tras un bloque recién tecleado (`Type Bar unavailable`) | **Sobra una llave `}`**: cierra la barra entera antes de tiempo y lo que sigue queda fuera | Contar las llaves de cierre del bloque (`Item`, `Repeater`, `Row`, contenedor) y borrar la sobrante |
 | Un chip o panel se ve con el color equivocado (por ejemplo, el panel con el color del chip) | Se cambiaron los dos nombres a la vez y quedaron cruzados | `bgChip` es para los chips de la barra y `bgPopup` para los paneles desplegables |
+| El texto largo de una ficha se corta con `…` y no se ve entero | Falta permitir el salto de línea | `wrapMode: Text.WordWrap` (y que la altura de la ficha dependa de su contenido) |
 
 Y en los scripts de shell y en la terminal:
 
@@ -850,11 +890,31 @@ Timer {
 
 El fichero completo está en `.config/quickshell/Bar.qml`.
 
-### 9.7 Panel desplegable de red
+### 9.7 Panel de red: el medallón
 
-Al **pulsar el chip**, se ilumina y bajo él se despliega una tarjeta con el detalle de la conexión: **conexión, dispositivo, IP, puerta de enlace, DNS, MAC y velocidad**. Un segundo clic la cierra.
+Al **pulsar el chip de red** se abre un panel con un **medallón de latón** en el centro, con el nombre de la conexión, su estado y un **anillo de 24 marcas** que se ilumina según la señal. Alrededor, **cinco fichas de cuero** unidas al medallón por hilos finos de latón, con los detalles. Un segundo clic en el chip lo cierra.
 
-Los datos los entrega un segundo script, `netinfo.sh`, en formato `clave=valor`. `~/.config/quickshell/scripts/netinfo.sh`:
+Abajo hay un selector **Cable | Wi-Fi | Bluetooth** y, a la derecha, un botón redondo de latón.
+
+| Pestaña | Qué muestra | Datos |
+|---|---|---|
+| **Cable** | Medallón con el nombre de la conexión, «Conectada» y el anillo completo. Fichas: dispositivo, IP, velocidad, puerta de enlace y DNS | **Reales** (los entrega `netinfo.sh`) |
+| **Wi-Fi** | Una red de ejemplo (Casa_5G): banda, IP, seguridad e intensidad de señal | **De ejemplo**, marcados como tales |
+| **Bluetooth** | Un dispositivo de ejemplo (JBL Tune 720BT): códec, tipo, batería e intensidad | **De ejemplo**, marcados como tales |
+
+Las fichas de la pestaña Cable:
+
+| Ficha | Etiqueta | Dato |
+|---|---|---|
+| `ETH` | Dispositivo | `dispositivo` (por ejemplo, `enp0s3`) |
+| `IP` | Dirección IP | `ip`, sin la máscara |
+| `Mb/s` | Velocidad | `velocidad` |
+| `GW` | Puerta de enlace | `puerta` |
+| `DNS` | Servidores DNS | `dns` (si hay varios, **cada uno baja a su línea** y la ficha crece) |
+
+> ⚠️ **Hoy es solo la mitad real.** La pestaña Cable muestra datos de verdad. **Wi-Fi y Bluetooth son de ejemplo**, porque la VM no tiene ese hardware. El botón de latón solo cambia el aspecto del panel (todavía no apaga nada), y las fichas «Escanear redes» y «Escanear dispositivos» están inertes («Próximamente»). Todo ello se conectará a `nmcli` y `bluetoothctl` en hardware real ([apartado 14](#s14)).
+
+Los datos reales los entrega un segundo script, `netinfo.sh`, en formato `clave=valor`. `~/.config/quickshell/scripts/netinfo.sh`:
 
 ```sh
 #!/bin/sh
@@ -887,40 +947,46 @@ chmod +x $HOME/.config/quickshell/scripts/netinfo.sh
 $HOME/.config/quickshell/scripts/netinfo.sh
 ```
 
-En `Bar.qml`, el panel se compone de:
+El panel se compone de dos partes: en `Bar.qml`, lo que recoge los datos y coloca el panel; y en `NetPanel.qml`, todo el dibujo.
 
-| Pieza | Función |
-|---|---|
-| `Process` (`infoProc`) | Ejecuta `netinfo.sh` y convierte cada línea `clave=valor` en una propiedad (`root.info`) |
-| `Timer` (3 s) | Refresca los datos **solo mientras el panel está abierto** |
-| `MouseArea` en el chip | Alterna `root.netOpen` |
-| `PopupWindow` | La tarjeta, anclada a la barra con `anchor.window: root` |
+| Pieza | Dónde | Función |
+|---|---|---|
+| `Process` (`infoProc`) | `Bar.qml` | Ejecuta `netinfo.sh` y convierte cada línea `clave=valor` en una propiedad de `root.info` |
+| `Timer` (3 s) | `Bar.qml` | Refresca los datos **solo mientras el panel está abierto** |
+| `MouseArea` en el chip | `Bar.qml` | Alterna `root.netOpen` |
+| `NetPanel { ... }` | `Bar.qml` | Coloca el panel bajo la barra y le pasa `info: root.info` |
+| `NetPanel.qml` | Fichero propio | Medallón, fichas, hilos, selector y botón |
 
-Posición y tamaño de la tarjeta:
+El bloque de `Bar.qml` (el panel de red está a la derecha, bajo el chip):
 
 ```qml
-PopupWindow {
+NetPanel {
     id: netPanel
-    readonly property int panelWidth: 300
-
     anchor.window: root
-    anchor.rect.x: root.width - panelWidth - 8
+    anchor.rect.x: root.width - implicitWidth - 8
     anchor.rect.y: root.height + 4
-    implicitWidth: panelWidth
-    implicitHeight: 215
     visible: root.netOpen
-    color: "transparent"
-    // ...
+    info: root.info
 }
 ```
 
-> 💡 La tarjeta cuelga del borde derecho (`root.width - panelWidth - 8`) y 4 px por debajo de la barra (`root.height + 4`). Si el panel aparece en la esquina izquierda, suele ser una errata en `panelWidth`.
+Cómo está construido `NetPanel.qml` (el fichero completo está en `.config/quickshell/NetPanel.qml`):
+
+| Elemento | Cómo se dibuja |
+|---|---|
+| Tamaño | 520 × 450 px; el medallón en el centro (`cx` 260, `cy` 205) |
+| Anillos de fondo | Tres círculos con borde fino y poca opacidad |
+| Hilos | Un rectángulo estrecho por cada ficha, **rotado** desde el centro (`rotation` con `Math.atan2`, `transformOrigin: Item.Left`) y un punto dorado en el extremo |
+| Anillo de marcas | 24 pequeños rectángulos, cada uno dentro de un `Item` **rotado** `índice × 15°`; se iluminan los primeros `intensidad ÷ 100 × 24` |
+| Fichas | Un `Repeater` sobre `cards`, que calcula la función `cardsFor()` según la pestaña; las posiciones salen de la lista `slots` |
+| Texto largo | `wrapMode: Text.WordWrap` y `height: Math.max(46, columna.implicitHeight + 14)`: la ficha crece en lugar de cortar con `…` |
+| Selector | Tres botones con forma de píldora; el activo va en dorado |
+
+> 💡 Los iconos del medallón son de Nerd Font: `\uf0e8` (red de nodos, para el cable), `\uf1eb` (Wi-Fi), `\uf293` (Bluetooth) y `\uf011` (el botón de encendido). Se comprueban antes con `printf '\uf0e8  \uf1eb  \uf293  \uf011\n'` en kitty (los de cable, Wi-Fi y encendido están verificados; el de Bluetooth conviene comprobarlo). Las insignias de las fichas son **texto corto** (`ETH`, `IP`, `GW`, `DNS`) en lugar de iconos, para no depender de la fuente.
 
 > 💡 El panel no usa nombres de interfaz: sirve igual para cable y Wi-Fi. Con Wi-Fi, la velocidad aparecerá como `-` (no existe en `/sys/class/net/.../speed`) hasta que se añadan campos propios del Wi-Fi.
 
-> 💡 El panel se cierra con un segundo clic en el chip; todavía no se cierra al pulsar fuera.
-
-> 💡 Este panel es el provisional: el definitivo será el **medallón** de red y Bluetooth ([apartado 14](#s14)).
+> 💡 La tarjeta cuelga del borde derecho (`root.width - implicitWidth - 8`) y 4 px por debajo de la barra (`root.height + 4`). El panel se cierra con un segundo clic en el chip; todavía no se cierra al pulsar fuera.
 
 ### 9.8 Chip de volumen en la barra
 
@@ -976,6 +1042,8 @@ Process {
 > ⚠️ **Limitaciones de VirtualBox:** el dispositivo de audio virtual impone un volumen mínimo (≈ 45 %: pedir un 10 % deja 0.45) y **no aplica el silencio** (`set-mute` no cambia nada). El chip muestra fielmente lo que informa `wpctl`; en hardware real el rango es completo y el silencio funciona.
 
 > 💡 `set-volume` y `set-mute` son órdenes distintas: la primera recibe un porcentaje y la segunda solo `1`, `0` o `toggle`.
+
+> 💡 El definitivo será una **perilla de latón con números romanos**, con el silencio dentro del panel ([apartado 14](#s14)).
 
 ### 9.9 Fondo de pantalla
 
@@ -1048,7 +1116,7 @@ En lugar de una franja entera, la barra y el panel lateral tienen la ventana **t
 color: "transparent"
 ```
 
-Para ajustar los bloques, se les da transparencia con un valor alfa en el color. Esos valores viven en el tema: `Theme.bgChip` (`#f04a382a`) para los chips de la barra y `Theme.bgPopup` (`#fa4a382a`) para los paneles desplegables; los dos primeros dígitos son la opacidad, de `00` a `ff`. Todos los chips llevan además un borde fino (`border.color: Theme.line`, `border.width: 1`) para que se distingan sobre un fondo oscuro.
+Para ajustar los bloques, se les da transparencia con un valor alfa en el color. Esos valores viven en el tema: `Theme.bgChip` (`#f04a382a`) para los chips de la barra y `Theme.bgPopup` (`#fa4a382a`) para los paneles desplegables; los dos primeros dígitos son la opacidad, de `00` a `ff`. Todos los chips llevan además un borde fino (`border.color: Theme.line`, `border.width: 1`) para que se distingan sobre un fondo oscuro, y miden **32 px** de alto ([9.2](#92-ficheros-de-configuración)).
 
 > ⚠️ **Limitación conocida (barra superior):** la ventana transparente sigue ocupando su franja entera: **reserva espacio** (las ventanas no llegan al borde) y **bloquea los clics** sobre lo que haya debajo. Se resuelve con una máscara de entrada que limite la zona sensible a los bloques (pendiente, [apartado 14](#s14)).
 
@@ -1063,7 +1131,7 @@ A la derecha de los workspaces aparece un chip con lo que suena ahora, por ejemp
 | Primer botón | Canción anterior |
 | Segundo botón | Pausa o reproducir (el icono cambia según el estado) |
 | Tercer botón | Canción siguiente |
-| Texto | «Canción - Artista», recortado a 180 px con `...` |
+| Texto | «Canción - Artista», recortado a 180 px con `...`. **Al pulsarlo se abre o se cierra el panel del reproductor** ([9.14](#914-panel-del-reproductor)) |
 | Sin reproductor | El chip no se muestra |
 
 **Qué reproductor elige:** `Spotify` si está abierto; si no, el que esté sonando; si no, el primero de la lista.
@@ -1086,6 +1154,8 @@ import QtQuick
 
 Rectangle {
     id: chip
+
+    property bool opened: false
 
     function pickPlayer() {
         var list = Mpris.players.values
@@ -1116,7 +1186,7 @@ Rectangle {
     readonly property var player: pickPlayer()
 
     visible: player !== null
-    height: 28
+    height: 32
     width: row.implicitWidth + 20
     radius: Theme.radius
     color: Theme.bgChip
@@ -1195,18 +1265,32 @@ Rectangle {
                 font.pixelSize: 12
                 text: chip.shortText()
             }
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: chip.opened = !chip.opened
+            }
         }
     }
 }
 ```
 
-Se coloca en `Bar.qml` **fuera** del `Rectangle` del `wsBox` y justo **encima** de él, al mismo nivel:
+Se coloca en `Bar.qml` **fuera** del `Rectangle` del `wsBox` y justo **encima** de él, al mismo nivel. Lleva un `id` (`playerChip`) porque el panel del reproductor necesita su posición y su reproductor:
 
 ```qml
 Player {
+    id: playerChip
     anchors.left: wsBox.right
     anchors.leftMargin: 8
     anchors.verticalCenter: wsBox.verticalCenter
+}
+
+PlayerPanel {
+    anchor.window: root
+    anchor.rect.x: playerChip.x
+    anchor.rect.y: root.height + 4
+    visible: playerChip.opened && playerChip.player !== null
+    player: playerChip.player
 }
 
 Rectangle {
@@ -1221,6 +1305,7 @@ Rectangle {
 | `pickPlayer()` | Elige el reproductor, con preferencia por Spotify |
 | `shortText()` | Compone el texto corto |
 | `visible: player !== null` | Muestra el chip solo si hay reproductor |
+| `opened` | Interruptor que abre y cierra el panel del reproductor |
 | `"\uf048"`, `"\uf04b"`, `"\uf04c"`, `"\uf051"` | Iconos de anterior, reproducir, pausa y siguiente (fuente Nerd Font) |
 
 > 💡 El chip usa el tema: los colores (`Theme.fg`, `Theme.bgChip`, `Theme.line`), el radio (`Theme.radius`) y la fuente de iconos (`Theme.fontIcons`) vienen de `Theme.qml` ([9.13](#913-tema-themeqml)). Si alguna línea de tu `Player.qml` difiere en detalles de este bloque, manda siempre el fichero del repositorio.
@@ -1233,218 +1318,44 @@ Rectangle {
 
 > 💡 **La cola de canciones no se puede mostrar** con MPRIS: ni Spotify ni YouTube en Brave exponen la lista de pistas siguientes. Solo sería posible con la API web de Spotify, en hardware real ([apartado 14](#s14)).
 
-### 9.12 Calendario del reloj
+### 9.12 Agenda de cuero del reloj
 
-Al **pulsar el reloj** del centro de la barra se despliega, justo debajo y centrado, un **calendario del mes**: con el día de hoy resaltado y flechas para cambiar de mes y de año. Un segundo clic en el reloj lo cierra. Se construye en QML puro, con las fechas de JavaScript, sin instalar nada.
+Al **pulsar el reloj** del centro de la barra se despliega, justo debajo y centrado, una **agenda de cuero abierta**, de doble página, como un libro:
 
 | Elemento | Efecto |
 |---|---|
+| **Página izquierda: el mes** | Título del mes en versalitas con su año, doble filete, los días de la semana con los **domingos en rojo**, el día de hoy rodeado a tinta y el día elegido resaltado en dorado |
 | `«` y `»` | Año anterior y siguiente |
 | `‹` y `›` | Mes anterior y siguiente |
-| Título (mes y año) | Al pulsarlo, vuelve al mes actual |
-| Fila `L M X J V S D` | Los días de la semana, empezando en **lunes** |
-| Día de hoy | Resaltado en dorado (solo si el mes mostrado es el actual) |
-| Segundo clic en el reloj | Cierra el calendario (todavía no se cierra al pulsar fuera) |
+| «Volver a hoy» | Vuelve al mes y al día actuales |
+| Pulsar un día | Abre **su página** a la derecha |
+| **Página derecha: el día** | El número grande, el día de la semana y el mes, y debajo la lista de tareas de ese día |
+| Una tarea | Casilla, texto y una **etiqueta de color** (Pendiente, Lectura o Música); al pulsarla se **tacha** y se atenúa |
+| Puntos de color | Bajo los días que tienen algo apuntado, uno por etiqueta |
+| Cinta roja y pestañas | El marcapáginas de la página derecha y las pestañas de índice de colores en el borde |
+| Segundo clic en el reloj | Cierra la agenda (todavía no se cierra al pulsar fuera) |
 
-`~/.config/quickshell/Calendar.qml`:
+> ⚠️ **Hoy es solo la parte visual.** La agenda está vacía («Nada apuntado para este día») y todavía **no se pueden añadir tareas ni se guarda nada**; el aviso al pie lo dice. La parte funcional (guardar en `~/.local/share/pikson/agenda.json`, añadir, tachar y borrar) está pendiente ([apartado 14](#s14)).
 
-```qml
-import Quickshell
-import QtQuick
+La ventana mide 664 × 410 px: una cubierta de cuero oscuro con un pespunte dorado y dos páginas de papel color vitela (310 × 386 px cada una), con una sombra en el lomo. El fichero completo está en `.config/quickshell/Calendar.qml`.
 
-PopupWindow {
-    id: cal
+Cómo se organiza por dentro:
 
-    property date shown: new Date()
-    property date today: new Date()
-    readonly property var monthNames: ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"]
-    readonly property var dayNames: ["L", "M", "X", "J", "V", "S", "D"]
-    readonly property int firstOffset: (new Date(shown.getFullYear(), shown.getMonth(), 1).getDay() + 6) % 7
-    readonly property int daysInMonth: new Date(shown.getFullYear(), shown.getMonth() + 1, 0).getDate()
-
-    function shift(n) {
-        shown = new Date(shown.getFullYear(), shown.getMonth() + n, 1)
-    }
-
-    onVisibleChanged: {
-        if (visible) {
-            today = new Date()
-            shown = new Date()
-        }
-    }
-
-    implicitWidth: 232
-    implicitHeight: content.implicitHeight + 20
-    color: "transparent"
-
-    Rectangle {
-        anchors.fill: parent
-        radius: Theme.radius
-        color: Theme.bgPopup
-        border.color: Theme.line
-        border.width: 1
-
-        Column {
-            id: content
-            anchors.top: parent.top
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.margins: 10
-            spacing: 6
-
-            Row {
-                Item {
-                    width: 28
-                    height: 26
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "\uf100"
-                        color: Theme.fg
-                        font.family: Theme.fontIcons
-                        font.pixelSize: 12
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: cal.shift(-12)
-                    }
-                }
-
-                Item {
-                    width: 28
-                    height: 26
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "\uf104"
-                        color: Theme.fg
-                        font.family: Theme.fontIcons
-                        font.pixelSize: 12
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: cal.shift(-1)
-                    }
-                }
-
-                Item {
-                    width: 100
-                    height: 26
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: cal.monthNames[cal.shown.getMonth()] + " " + cal.shown.getFullYear()
-                        color: Theme.fg
-                        font.pixelSize: 12
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: cal.shown = new Date()
-                    }
-                }
-
-                Item {
-                    width: 28
-                    height: 26
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "\uf105"
-                        color: Theme.fg
-                        font.family: Theme.fontIcons
-                        font.pixelSize: 12
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: cal.shift(1)
-                    }
-                }
-
-                Item {
-                    width: 28
-                    height: 26
-
-                    Text {
-                        anchors.centerIn: parent
-                        text: "\uf101"
-                        color: Theme.fg
-                        font.family: Theme.fontIcons
-                        font.pixelSize: 12
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        onClicked: cal.shift(12)
-                    }
-                }
-            }
-
-            Row {
-                Repeater {
-                    model: cal.dayNames
-
-                    delegate: Item {
-                        required property string modelData
-
-                        width: 30
-                        height: 20
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: parent.modelData
-                            color: Theme.fgMuted
-                            font.pixelSize: 11
-                        }
-                    }
-                }
-            }
-
-            Grid {
-                columns: 7
-
-                Repeater {
-                    model: 42
-
-                    delegate: Item {
-                        id: cell
-                        required property int index
-
-                        readonly property int day: index - cal.firstOffset + 1
-                        readonly property bool valid: day >= 1 && day <= cal.daysInMonth
-                        readonly property bool isToday: valid && day === cal.today.getDate() && cal.shown.getMonth() === cal.today.getMonth() && cal.shown.getFullYear() === cal.today.getFullYear()
-
-                        width: 30
-                        height: 26
-
-                        Rectangle {
-                            anchors.centerIn: parent
-                            width: 24
-                            height: 24
-                            radius: 6
-                            color: cell.isToday ? Theme.accent : "transparent"
-                        }
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: cell.valid ? cell.day : ""
-                            color: cell.isToday ? Theme.fgOnAccent : Theme.fg
-                            font.pixelSize: 12
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-```
+| Pieza | Función |
+|---|---|
+| `shown`, `today`, `selected` | El mes que se está viendo, la fecha de hoy y el día elegido |
+| `agenda` | Un objeto cuyas claves son fechas (`año-mes-día`, con el mes empezando en 0) y cuyos valores son listas de tareas `{ t, tag, done }` |
+| `tags` | Las etiquetas y su color: Pendiente (rojo), Lectura (verde azulado), Música (ocre) |
+| `firstOffset`, `daysInMonth` | Día de la semana en que empieza el mes (lunes = 0) y su número de días |
+| `selectedTasks` | Las tareas del día elegido |
+| `dotsFor(día)` | Los colores de los puntos de un día |
+| `toggle(i)` | Tacha o destacha una tarea (reasigna `agenda` para que la vista se actualice) |
+| `seed()` | Crea tareas de ejemplo; **ya no se llama**, se deja por si hace falta probar |
+| `goToday()` | Vuelve a hoy; se ejecuta también al abrir la agenda |
 
 Se engancha al reloj con **tres inserciones en `Bar.qml`**:
 
-**1.** Junto a `netOpen`, la propiedad que abre y cierra el calendario (**las dos deben existir**):
+**1.** Junto a `netOpen`, la propiedad que abre y cierra la agenda (**las dos deben existir**):
 
 ```qml
 property bool netOpen: false
@@ -1467,7 +1378,7 @@ Text {
 }
 ```
 
-**3.** Justo después del `Text` del reloj, **fuera** de él, el calendario, centrado bajo la barra:
+**3.** Justo después del `Text` del reloj, **fuera** de él, la agenda, centrada bajo la barra:
 
 ```qml
 Calendar {
@@ -1478,19 +1389,13 @@ Calendar {
 }
 ```
 
-| Pieza | Función |
-|---|---|
-| `shown` | El mes que se está viendo; `shift(n)` lo mueve `n` meses |
-| `firstOffset` | Día de la semana en que empieza el mes, con el lunes como 0: `(getDay() + 6) % 7` |
-| `daysInMonth` | Días del mes (28 a 31), con `new Date(año, mes + 1, 0).getDate()` |
-| Cuadrícula de 42 casillas | 6 filas × 7 días; las que no son del mes quedan en blanco |
-| `onVisibleChanged` | Al abrir, vuelve al mes actual y refresca la fecha de hoy |
-
-> ⚠️ **El `MouseArea` va dentro del `Text` del reloj.** Si queda fuera, su `anchors.fill: parent` cubre **toda la barra**: cualquier clic abre el calendario y los chips de volumen y de red dejan de responder.
+> ⚠️ **El `MouseArea` va dentro del `Text` del reloj.** Si queda fuera, su `anchors.fill: parent` cubre **toda la barra**: cualquier clic abre la agenda y los chips de volumen y de red dejan de responder.
 
 > 💡 La hora de la barra sale del reloj del sistema: si va atrasada, ver [1.3](#13-zona-horaria-y-hora).
 
-> 💡 Este calendario es el sencillo. El definitivo será la **agenda de cuero**, con una página para el mes y otra para el día ([apartado 14](#s14)).
+> 💡 **Colores con transparencia:** el día elegido usa `#99e2b564` (dorado a media opacidad). En QML el alfa va **delante**; `#e2b56499` sería rosa.
+
+> 💡 Escribir texto en la agenda (para añadir tareas) puede exigir que la ventana **reciba el teclado**, y los paneles desplegables de Quickshell no siempre lo reciben en Hyprland. Habrá que probarlo antes de seguir, y quizá convertir la agenda en otro tipo de ventana ([apartado 14](#s14)).
 
 ### 9.13 Tema: `Theme.qml`
 
@@ -1526,6 +1431,10 @@ Singleton {
     readonly property color ok: "#adc783"
     readonly property color fgOnAccent: "#2d1e12"
 
+    // Lomos de los workspaces y su balda
+    readonly property var spines: ["#8a3b32", "#3d5566", "#a8793f", "#5e3d52", "#6f4a32"]
+    readonly property color wood: "#7a5638"
+
     readonly property int radius: 14
     readonly property int radiusSmall: 8
 
@@ -1542,18 +1451,20 @@ Singleton {
 | Propiedad | Para qué se usa |
 |---|---|
 | `bgChip` | Fondo de los chips de la barra (casi opaco) |
-| `bgPopup` | Fondo de los paneles desplegables (calendario, red) |
-| `bgCell` | Fondo de las casillas pequeñas (por ejemplo, los workspaces dentro de su contenedor) |
+| `bgPopup` | Fondo de los paneles desplegables (red, reproductor) |
+| `bgCell` | Fondo de las casillas pequeñas (por ejemplo, las insignias de las fichas de red) |
 | `line` | Bordes finos |
 | `fg` | Texto principal (vainilla) |
-| `fgMuted` | Texto secundario y días de la semana |
-| `accent` | El color de énfasis (dorado): workspace activo, día de hoy |
+| `fgMuted` | Texto secundario y etiquetas |
+| `accent` | El color de énfasis (dorado): lomo activo, anillo de señal |
 | `accent2` | Segundo énfasis (terracota): al pasar el ratón por la bandeja |
 | `ok` | Estado correcto (verde apagado) |
-| `fgOnAccent` | Texto que va **sobre** `accent` |
+| `fgOnAccent` | Texto que va **sobre** `accent` o sobre el latón |
+| `spines` | Los cinco colores de los lomos de los workspaces (burdeos, azul petróleo, ocre, ciruela y cuero) |
+| `wood` | La madera: la balda de los lomos y el marco cuadrado del reproductor |
 | `radius`, `radiusSmall` | Esquinas de paneles y chips, y de las casillas pequeñas |
 | `fontSerif`, `fontUi`, `fontIcons` | Tipografías: serif de detalle, texto y iconos |
-| `sizeText`, `sizeClock`, `chipHeight` | Tamaños de letra y altura de los chips |
+| `sizeText`, `sizeClock`, `chipHeight` | Tamaños de letra y altura de los chips (hoy los chips se miden en cada fichero: 32; está pendiente unificarlos aquí) |
 
 Uso en cualquier pieza:
 
@@ -1574,7 +1485,55 @@ Rectangle {
 
 > 💡 **Cambiar los colores = editar este fichero.** Quickshell se actualiza al guardar. Pero el terminal ([5.2](#52-configuración-propia-kittyconf)) y los bordes de las ventanas ([apartado 8](#otros-ajustes-de-hyprlandlua-bordes-y-separación)) tienen sus propias copias de la paleta y hay que cambiarlos aparte.
 
-> 💡 Un tema es, además, un **punto único de verdad** para el futuro: los paneles nuevos (reproductor, volumen, red) ya se escribirán usando `Theme.` desde el principio. Los colores de los lomos de los workspaces se añadirán aquí como `spine1`…`spine5`.
+> 💡 Los paneles del reproductor, de la red y de la agenda usan además algunos **colores propios** (los degradados del latón, el papel vitela, el cuero de la cubierta) escritos directamente en sus ficheros. Pasarlos al tema, para tener un único punto de verdad, está pendiente ([apartado 14](#s14)).
+
+### 9.14 Panel del reproductor
+
+Al **pulsar el texto de la canción** en el chip de música se despliega, bajo el chip, un **retrato con marco** y una **placa de latón**. Un segundo clic en el texto lo cierra.
+
+| Elemento | Qué hace |
+|---|---|
+| **Marco** | Depende de la carátula: si es **cuadrada** (Spotify), un marco de **madera con paspartú crema**; si es **de vídeo 16:9** (YouTube), un marco **dorado clásico con cuatro remaches** en las esquinas |
+| **Disco dorado** | Si no hay carátula, un disco de latón con sus surcos |
+| **Placa de latón** | El título en versalitas (hasta dos líneas), el artista en cursiva y el icono de la fuente |
+| **Icono de la fuente** | YouTube (`\uf16a`) si es un navegador, Spotify (`\uf1bc`) o una nota musical (`\uf001`) |
+| **Barra de progreso** | Con pomo y los tiempos (`7:44` y `13:52`); se **arrastra** y al soltar salta a ese punto |
+| **Controles** | Anterior, reproducir/pausa (en un disco oscuro), siguiente y **bucle** |
+| **Bucle** | Tres estados: apagado, repetir canción (se enciende con un «1») y repetir lista (se enciende) |
+
+El panel es el fichero `.config/quickshell/PlayerPanel.qml`. Se conecta a `Bar.qml` con el bloque de [9.11](#911-chip-de-música-en-la-barra) y recibe el reproductor con `player: playerChip.player`.
+
+| Pieza | Función |
+|---|---|
+| `player` | El reproductor MPRIS que le pasa la barra |
+| `wide` | Es verdadero cuando la carátula tiene una proporción mayor de 1,3: activa el marco dorado y los remaches |
+| `hasLength` | Verdadero si el reproductor informa de la duración: muestra la barra de progreso |
+| `frac` | La posición relativa (de 0 a 1), o la del arrastre en curso |
+| `Timer` (500 ms) | Llama a `player.positionChanged()` mientras suena y el panel está abierto: **la posición no se actualiza sola** |
+| `MouseArea` de la barra | Mientras se arrastra, guarda la fracción en `dragFrac`; al soltar, ejecuta `player.position = fracción × duración` si `canSeek` es verdadero |
+| `nextLoop()` | Recorre `MprisLoopState.None → Track → Playlist → None` |
+
+```qml
+function nextLoop() {
+    if (!panel.player || !panel.player.loopSupported)
+        return
+    var s = panel.player.loopState
+    if (s === MprisLoopState.None)
+        panel.player.loopState = MprisLoopState.Track
+    else if (s === MprisLoopState.Track)
+        panel.player.loopState = MprisLoopState.Playlist
+    else
+        panel.player.loopState = MprisLoopState.None
+}
+```
+
+> ⚠️ **El bucle se ve atenuado con Brave:** el navegador no ofrece el control de repetición por MPRIS (`loopSupported` es falso), así que el botón queda apagado. Con **Spotify real**, en hardware físico, sí funcionará.
+
+> ⚠️ **El icono de YouTube es `\uf16a`, no `\uf167`.** Este último sale como un rombo en JetBrains Mono Nerd Font. Antes de usar un icono nuevo, se prueba en kitty: `printf '\uf16a  \uf1bc  \uf001\n'`.
+
+> 💡 La barra de progreso solo aparece si el reproductor informa de su duración (`lengthSupported`). Los vídeos de Brave la dan; algunos directos, no.
+
+> 💡 Las carátulas de YouTube Music vienen en 16:9 con franjas laterales de color. El marco dorado las recoge sin recortarlas.
 
 ---
 
@@ -1679,6 +1638,8 @@ git push
 > 💡 Los scripts nuevos deben conservar su permiso de ejecución: tras `git add .`, `git ls-files -s .config/quickshell/scripts` debe mostrar `100755` en todos.
 
 > ⚠️ **No copies nunca `~/.config` completo** al repositorio: contiene el token de GitHub (`gh`), datos del navegador y sesiones. Copia solo las carpetas que configures a propósito. Elimina antes las copias `.bak` (`rm -f ~/.config/quickshell/*.bak`).
+
+> ⚠️ Los datos personales (la futura `agenda.json`, `libros.json`...) **viven fuera del repositorio**, en `~/.local/share/pikson/`, y no se suben.
 
 ### 11.6 Cómo se sincronizan las copias
 
@@ -1786,6 +1747,16 @@ Consulta y controla Hyprland en marcha:
 | `hyprctl clients` | Las ventanas abiertas: clase, tamaño, posición, `pid` y si usan XWayland |
 | `hyprctl layers` | Las capas de Quickshell (barra, panel, fondo) |
 | `hyprctl reload` | Recarga la configuración |
+
+### Probar iconos de Nerd Font
+
+Antes de usar un icono nuevo en Quickshell (`"\uf16a"`), se comprueba que **existe en la fuente** escribiéndolo en kitty. Si sale un dibujo, sirve; si sale un rombo o un recuadro vacío, hay que elegir otro código:
+
+```bash
+printf '\uf16a  \uf1bc  \uf001  \uf0e8  \uf1eb  \uf011\n'
+```
+
+> 💡 Los códigos son los de **Font Awesome** dentro de Nerd Font. Algunos no coinciden con lo que se espera (`\uf167` no es el logotipo de YouTube en esta fuente), por eso conviene probarlos siempre.
 
 ### zsh, plugins y starship
 
@@ -1919,13 +1890,13 @@ El fondo de pantalla viaja dentro de `.config/quickshell/` (`Wallpaper.qml` y `w
 
 Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1](#11-red-networkmanager)). Activa también el audio ([apartado 1.2](#12-audio-pipewire)): los paquetes de PipeWire llegan con `pkglist.txt`, pero sus servicios de usuario se activan con `systemctl --user enable --now pipewire pipewire-pulse wireplumber`. Ajusta la **zona horaria** ([1.3](#13-zona-horaria-y-hora)), que tampoco viaja con el repositorio.
 
-**Cambia la shell a zsh** (`chsh -s /usr/bin/zsh`; este ajuste **no viaja con el repositorio**) y **cierra la sesión del TTY** (`exit`) para iniciarla de nuevo: salir de Hyprland no basta ([apartado 12](#s12)). Con el `.zprofile` copiado, Hyprland arranca solo tras el login ([apartado 4.1](#41-arranque-automático-de-hyprland)); si no, entra con `start-hyprland`. La barra (con el chip de música y el calendario), la bandeja del sistema y el fondo arrancan solos; la bandeja solo se ve cuando hay alguna aplicación en segundo plano, y el chip de música cuando hay algo sonando.
+**Cambia la shell a zsh** (`chsh -s /usr/bin/zsh`; este ajuste **no viaja con el repositorio**) y **cierra la sesión del TTY** (`exit`) para iniciarla de nuevo: salir de Hyprland no basta ([apartado 12](#s12)). Con el `.zprofile` copiado, Hyprland arranca solo tras el login ([apartado 4.1](#41-arranque-automático-de-hyprland)); si no, entra con `start-hyprland`. La barra (con los lomos de libros, el chip de música y la agenda), la bandeja del sistema y el fondo arrancan solos; la bandeja solo se ve cuando hay alguna aplicación en segundo plano, y el chip de música cuando hay algo sonando.
 
 | Fichero | Contenido |
 |---|---|
 | `pkglist.txt` | Paquetes de los repositorios oficiales |
 | `aur-pkglist.txt` | Paquetes del AUR |
-| `.config/` | Configuración de Hyprland, Quickshell (con su tema) y kitty |
+| `.config/` | Configuración de Hyprland, Quickshell (con su tema y sus paneles) y kitty |
 | `zsh/.zshrc` | Configuración de zsh (se copia a `~/.zshrc`) |
 | `zsh/.zprofile` | Arranque automático de Hyprland en el TTY1 (se copia a `~/.zprofile`) |
 
@@ -1946,17 +1917,24 @@ Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1
 
 La estética es una **biblioteca antigua**: cuero, latón, madera y números romanos. Cada pieza tiene su boceto aprobado.
 
-- [ ] **Workspaces como lomos de libros**: 5 lomos de colores distintos (`spine1`…`spine5` en `Theme.qml`), con números romanos I–V; el lomo activo sobresale con un brillo dorado, sobre una balda de madera
-- [ ] **Panel del reproductor**: al pulsar el chip, un retrato con **marco** (carátula cuadrada: marco de madera con paspartú crema; vídeo 16:9: marco dorado clásico con remaches) y una **placa de latón** con el título (versalitas), el artista (cursiva), los controles anterior, pausa, siguiente y bucle (no repetir / repetir canción / repetir lista; el activo se enciende), la barra de progreso con su pomo y el icono de la fuente. Sin carátula, un disco dorado. La carátula sale de MPRIS (`trackArtUrl`). El chip de la barra mostrará solo canción y artista
+- [ ] **Barra «A · Latón y placas»**: vestir por fuera los chips de la barra con placas de latón con tornillos, como ya están el reproductor y el medallón. Se construye por pasos:
+  1. Un componente nuevo, `Plate.qml` (rectángulo de 32 px de alto, esquinas de 6 px, degradado de latón, borde oscuro y dos tornillos), reutilizable en toda la barra
+  2. **Música:** la raíz de `Player.qml` pasa a ser `Plate`, con la canción en versalitas serif y los iconos en tinta oscura
+  3. **Reloj:** una placa con el día en versalitas serif («mié 11 nov») y la hora en letra de máquina pequeña; sigue abriendo la agenda al pulsar
+  4. **Red:** una placa con un mini medallón (`ETH` o el icono de Wi-Fi) y la IP; sigue abriendo el panel
+  5. **Volumen:** una placa con una mini perilla de latón cuya aguja gira según el volumen, y el porcentaje; conserva el clic y la rueda
 - [ ] **Volumen: perilla de latón con números romanos**: se abre al pulsar el chip; la perilla se arrastra, muestra el porcentaje y lleva un botón de silencio; la rueda del ratón sobre el chip se mantiene
-- [ ] **Red y Bluetooth: panel «medallón»**: un mismo panel con selector inferior Wi-Fi | Bluetooth. En el centro, un medallón de latón con el nombre y el estado (Conectada, Emparejado, Conectando…, Apagado) y un anillo de 24 marcas que se ilumina según la señal; alrededor, cinco fichas de cuero unidas por hilos de latón (Wi-Fi: banda, IP, escanear redes, seguridad y señal; Bluetooth: códec, tipo, escanear dispositivos, batería y señal). «Escanear» convierte las fichas en la lista de redes o dispositivos, y al elegir uno el medallón muestra «Conectando…». Un botón redondo de latón enciende y apaga. Las redes con candado pedirán la contraseña en una ficha extra. En la VM se probará con datos de ejemplo
-- [ ] **Calendario: agenda de cuero**, en dos fases: primero la parte visual (doble página de unos 640 px: el mes a la izquierda y la página del día a la derecha, con tareas, etiquetas, cinta marcapáginas y pestañas) y después la funcional, guardando los datos en `~/.local/share/pikson/agenda.json` (fuera del repositorio)
+- [ ] **Red y Bluetooth, fases 2 y 3 (hardware real)**: conectar las pestañas Wi-Fi y Bluetooth a `nmcli` y `bluetoothctl` en lugar de los datos de ejemplo; «Escanear redes» y «Escanear dispositivos» (las fichas pasan a ser las redes o dispositivos disponibles, y al elegir uno el medallón muestra «Conectando…»); la ficha de contraseña para las redes con candado; y que el botón de latón encienda y apague de verdad
+- [ ] **Agenda de cuero, fase 2 (funcional)**: guardar las notas, tareas y etiquetas en `~/.local/share/pikson/agenda.json` (fuera del repositorio, con `FileView` de `Quickshell.Io`); añadir una tarea con «+ Añadir…» eligiendo su etiqueta; tachar (ya funciona en memoria) y borrar con el botón derecho; los puntos de los días salen de los datos. **Riesgo:** escribir texto en un panel desplegable puede no recibir el teclado en Hyprland; si falla, convertir la agenda en una ventana de capa con `WlrLayershell.keyboardFocus` bajo demanda
 - [ ] **Tarjeta de libros**: lo que estoy leyendo, con el porcentaje; los datos personales irían en `libros.json` (fuera del repositorio) con un `libros.example.json` de muestra
+- [ ] **Reproductor:** probar el botón de bucle con Spotify real en hardware físico (en Brave se ve atenuado)
 - [ ] **Cola de canciones**: solo posible con la API web de Spotify (MPRIS no la expone), en hardware real
+- [ ] **Animaciones** (en este orden): 1) una transición común de apertura de los paneles (escala del 92 % al 100 % con aparición suave, aplicada al **contenido**, no al tamaño de la ventana); 2) un movimiento discreto en el medallón de red (las marcas del anillo que se iluminan en secuencia y un latido lento de los anillos de fondo); 3) cierres animados (hay que retener la ventana un instante mientras acaba la animación) y el giro de página de la agenda. Las animaciones en bucle solo deben ejecutarse **mientras el panel está abierto**, porque en la VM, con renderizado por software, pueden ir entrecortadas y gastar CPU
 
 **Tema y estética**
 
-- [ ] Usar los tamaños y fuentes del tema en todas las piezas (`Theme.sizeText`, `Theme.sizeClock`) y poner el reloj en la fuente serif (`Theme.fontSerif`)
+- [ ] Usar los tamaños y fuentes del tema en todas las piezas (`Theme.sizeText`, `Theme.sizeClock`, la altura de los chips) y poner el reloj en la fuente serif (`Theme.fontSerif`)
+- [ ] Pasar al tema los colores propios de los paneles (el degradado del latón, el papel vitela, el cuero de la cubierta)
 - [ ] Fondo de pantalla de tonos cálidos, o tintar el actual hacia sepia
 - [ ] Comprobar en `hyprland.lua` las esquinas redondeadas de las ventanas (`rounding`, unos 14 para casar con `Theme.radius`) y la sombra (`0xee1a110d`)
 - [ ] Una única fuente de colores para Quickshell, kitty y Hyprland (hoy están copiados en tres sitios)
@@ -1973,7 +1951,7 @@ La estética es una **biblioteca antigua**: cuero, latón, madera y números rom
 **Escritorio**
 
 - [ ] Máscara de entrada en la barra superior (que los huecos no bloqueen clics ni reserven espacio)
-- [ ] Cerrar los paneles al pulsar fuera (red, calendario y los que vengan)
+- [ ] Cerrar los paneles al pulsar fuera (red, reproductor, agenda y los que vengan)
 - [ ] Distribución de las ventanas: Discord necesita ≈ 940 px de ancho; decidir entre Discord a pantalla completa en su propio workspace o una distribución con una ventana más ancha
 - [ ] Lanzador de aplicaciones
 - [ ] Gestor de archivos y diálogos de archivos de GTK (se ven mal en la VM)
@@ -1988,6 +1966,18 @@ La estética es una **biblioteca antigua**: cuero, latón, madera y números rom
 - [ ] Probar el Wi-Fi y el Bluetooth (`bluez`, `bluez-utils`) con el panel medallón, y revisar el volumen y el silencio con el rango completo
 - [ ] Regenerar `pkglist.txt` y `aur-pkglist.txt` (debe aparecer `ttf-cormorant`)
 - [ ] GNU Stow para enlazar configuraciones (incluidos `zsh/.zshrc` y `zsh/.zprofile`)
-- [ ] Script `install.sh` que automatice este manual
+- [ ] Script `install.sh` que automatice este manual, preguntando si es una **VM o un equipo real** para aplicar o quitar lo que depende de ello: `virtualbox-guest-utils`, `LIBGL_ALWAYS_SOFTWARE=1`, la escala y la frecuencia del monitor
 - [ ] Probar el manual completo en una VM limpia
 - [ ] Login gráfico (SDDM, greetd con un greeter o uno propio con Quickshell), quitando el bloque de `~/.zprofile`
+
+**A largo plazo: un USB instalador con mi Arch**
+
+La idea es un USB booteable, como el de Windows 10 o el de Arch, pero que **instale mi entorno completo** (Hyprland, Quickshell, dotfiles y paquetes) en el disco de cualquier equipo. **No** consiste en clonar la VM, que no es portable (arrastra los controladores de VirtualBox y los identificadores de disco). No se empieza hasta tener el escritorio terminado.
+
+- [ ] 1. Terminar el escritorio, subirlo a GitHub y regenerar las listas de paquetes
+- [ ] 2. Escribir `install.sh` (ver arriba) y reutilizarlo como base de todo lo demás
+- [ ] 3. Un instalador con mi configuración: un script con `archinstall` (disco, usuario, contraseña, idioma, zona horaria y teclado US) más `install.sh`, o bien **Calamares** (asistente gráfico tipo Windows, más trabajo). Las contraseñas y el usuario se piden al instalar y **nunca** viajan en la imagen
+- [ ] 4. Construir la ISO con **archiso** (perfil `releng` más la lista de paquetes y el instalador). Decidir entre instalación **online** (ISO pequeña que descarga al instalar; los paquetes del AUR se compilan o se sirven desde un repositorio propio) y **offline** (ISO grande con todo, con el AUR compilado antes en un repositorio local)
+- [ ] 5. Grabarla con `dd` en un USB y probarla primero en una VM limpia y luego en hardware real (Wi-Fi, Bluetooth, tarjeta gráfica, UEFI). El *Secure Boot* no funciona con estas ISO
+
+> ⚠️ Cuidados: no meter tokens (`gh`), contraseñas ni datos personales en la imagen; Arch es de actualización continua, así que la ISO caduca y hay que reconstruirla de vez en cuando; y lo ajustado a la VM no debe llegar a equipos reales.
