@@ -1,151 +1,203 @@
 import Quickshell
+import Quickshell.Wayland
 import Quickshell.Widgets
-import Quickshell.Hyprland
 import Quickshell.Services.SystemTray
 import QtQuick
 
 PanelWindow {
-	id: root
+    id: win
 
-	anchors {
-		top: true
-		right: true
-		bottom: true
-	}
-	implicitWidth: 34
-	color: "transparent"
-	visible: SystemTray.items.values.length > 0
-	mask: Region { item: box }
-	
-	Rectangle {
-		id: box
-		anchors.right: parent.right
-		anchors.rightMargin: 4
-		anchors.bottom: parent.bottom
-		anchors.bottomMargin: 8
-		width: 30
-		height: col.implicitHeight + 12
-		radius: Theme.radius
-		color: Theme.bgChip
+    readonly property int railClosed: 6
+    readonly property int railOpen: 164
 
-		Column {
-			id: col
-			anchors.centerIn: parent
-			spacing: 6		
+    anchors {
+        top: true
+        right: true
+        bottom: true
+    }
+    implicitWidth: railOpen + 12
+    exclusionMode: ExclusionMode.Ignore
+    color: "transparent"
+    WlrLayershell.layer: WlrLayer.Overlay
+    WlrLayershell.namespace: "dock"
+    visible: ToplevelManager.toplevels.values.length > 0 || SystemTray.items.values.length > 0
+    mask: Region { item: rail }
 
-		Repeater {
-			model: SystemTray.items
-			
-			delegate: MouseArea {
-				id: trayItem
-				required property var modelData
+    function iconFor(id) {
+        var e = DesktopEntries.heuristicLookup(id)
+        var name = (e && e.icon) ? e.icon : id
+        return Quickshell.iconPath(name, true)
+    }
 
-				width: 20
-				height: 20
-				acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-			
-				onClicked: mouse => {
-					if (mouse.button === Qt.LeftButton && !modelData.onlyMenu){
-						modelData.activate()
-					} else if (mouse.button === Qt.MiddleButton) {
-						modelData.secondaryActivate()
-					} else {
-						console.log("TRAY menu: hasMenu=" + modelData.hasMenu + " entradas=" + opener.children.values.length)
-						popup.visible = !popup.visible
-					}
-				}
-				
-				IconImage {
-					anchors.fill: parent
-					source: trayItem.modelData.icon
-				}
-			
-				QsMenuOpener {
-					id: opener
-					menu: trayItem.modelData.menu
-				}
-				HyprlandFocusGrab {
-					windows: [popup]
-					active: popup.visible
-					onCleared: popup.visible = false
-				}
-				
-				PopupWindow {
-					id: popup
-					visible: false
-					anchor.window: root	
-					anchor.rect.x: box.x
-					anchor.rect.y: box.y + col.y + trayItem.y
-					anchor.rect.width: box.width
-					anchor.rect.height: trayItem.height
-					anchor.edges: Edges.Left
-					anchor.gravity: Edges.Left
-					implicitWidth: 190
-					implicitHeight: menuCol.implicitHeight + 12
-					color: "transparent"
-				
-				Rectangle {
-					anchors.fill: parent
-					radius: Theme.radius
-					color: Theme.bgPopup
-					border.color: Theme.line
-					border.width: 1
-				
-				Column {
-					id: menuCol
-					anchors.fill: parent
-					anchors.margins: 6
-					spacing: 2
-				
-					Repeater {
-						model: [ { "text": "Cerrar", "isSeparator": false, "enabled": true} ]
+    Rectangle {
+        id: rail
+        anchors.right: parent.right
+        anchors.top: parent.top
+        anchors.bottom: parent.bottom
+        width: hov.hovered ? win.railOpen : win.railClosed
+        clip: true
+        color: hov.hovered ? "#f52d1e12" : "transparent"
 
-						delegate: Rectangle {
-							id: entry
-							required property var modelData
+        Behavior on width {
+            NumberAnimation {
+                duration: 180
+                easing.type: Easing.OutCubic
+            }
+        }
 
-							width: menuCol.width
-							height: modelData.isSeparator ? 5: 26
-							radius: Theme.radiusSmall
-							color: (!modelData.isSeparator && entryMouse.containsMouse) ? Theme.accent2 : "transparent"
+        HoverHandler {
+            id: hov
+        }
 
-						Rectangle {
-							visible: entry.modelData.isSeparator
-							anchors.centerIn: parent
-							width: parent.width - 8
-							height: 1
-							color: Theme.line
-						}
-						
-						Text {
-							visible: !entry.modelData.isSeparator
-							anchors.verticalCenter: parent.verticalCenter
-							anchors.left: parent.left
-							anchors.leftMargin: 8
-							text: entry.modelData.text
-							color: entry.modelData.enabled ? Theme.fg : Theme.fgMuted
-							font.pixelSize: 12
-						}
-							
-						MouseArea {
-							id: entryMouse
-							anchors.fill: parent
-							hoverEnabled: true
-							enabled: !entry.modelData.isSeparator && entry.modelData.enabled
-							onClicked: {
-								Quickshell.execDetached(["sh", "-c", "$HOME/.config/quickshell/scripts/trayquit.sh \"$0\"", trayItem.modelData.id])
-								popup.visible = false
-							}
-						}
-					}
-				}
-			}
-		}					
-	}
-}	
+        Rectangle {
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.bottom: parent.bottom
+            width: 1
+            color: "#668c6d4f"
+            opacity: hov.hovered ? 1.0 : 0.0
+        }
+
+        Column {
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.right: parent.right
+            width: win.railOpen
+            spacing: 6
+            opacity: hov.hovered ? 1.0 : 0.0
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: 150
+                }
+            }
+
+            Repeater {
+                model: ToplevelManager.toplevels
+
+                delegate: Item {
+                    id: winRow
+                    required property var modelData
+                    width: parent.width
+                    height: 34
+
+                    Rectangle {
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 3
+                        height: 22
+                        radius: 2
+                        color: Theme.accent
+                        visible: winRow.modelData.activated
+                    }
+
+                    Row {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 14
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 10
+                        opacity: winRow.modelData.activated ? 1.0 : 0.7
+
+                        IconImage {
+                            implicitSize: 20
+                            source: win.iconFor(winRow.modelData.appId)
+                            visible: source !== ""
+                        }
+
+                        Text {
+                            visible: win.iconFor(winRow.modelData.appId) === ""
+                            width: 20
+                            horizontalAlignment: Text.AlignHCenter
+                            text: winRow.modelData.appId.substring(0, 1).toUpperCase()
+                            color: Theme.fg
+                            font.family: Theme.fontUi
+                            font.pixelSize: 14
+                            font.bold: true
+                        }
+
+                        Text {
+                            width: 100
+                            elide: Text.ElideRight
+                            text: winRow.modelData.appId
+                            color: winRow.modelData.activated ? Theme.fg : Theme.fgMuted
+                            font.family: Theme.fontUi
+                            font.pixelSize: 12
+                        }
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
+                        onClicked: function (mouse) {
+                            if (mouse.button === Qt.LeftButton)
+                                winRow.modelData.activate()
+                            else
+                                winRow.modelData.close()
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: 20
+                height: 1
+                color: "#998c6d4f"
+                visible: ToplevelManager.toplevels.values.length > 0 && SystemTray.items.values.length > 0
+            }
+
+            Repeater {
+                model: SystemTray.items
+
+                delegate: Item {
+                    id: trayRow
+                    required property var modelData
+                    width: parent.width
+                    height: 30
+
+                    MouseArea {
+                        anchors.fill: parent
+                        onClicked: trayRow.modelData.activate()
+                    }
+
+                    Row {
+                        anchors.left: parent.left
+                        anchors.leftMargin: 16
+                        anchors.verticalCenter: parent.verticalCenter
+                        spacing: 10
+                        opacity: 0.8
+
+                        IconImage {
+                            implicitSize: 16
+                            source: trayRow.modelData.icon
+                        }
+
+                        Text {
+                            width: 56
+                            elide: Text.ElideRight
+                            text: trayRow.modelData.title !== "" ? trayRow.modelData.title : trayRow.modelData.id
+                            color: Theme.fgMuted
+                            font.family: Theme.fontUi
+                            font.pixelSize: 11
+                        }
+                    }
+
+                    Text {
+                        anchors.right: parent.right
+                        anchors.rightMargin: 10
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "Cerrar"
+                        color: Theme.accent2
+                        font.family: Theme.fontUi
+                        font.pixelSize: 10
+
+                        MouseArea {
+                            anchors.fill: parent
+                            anchors.margins: -4
+                            onClicked: Quickshell.execDetached(["sh", "-c", "$HOME/.config/quickshell/scripts/trayquit.sh \"$0\"", trayRow.modelData.id])
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
-}
-}
-}
-
-		
