@@ -4,6 +4,7 @@ import QtQuick
 Rectangle {
 	id: chip
 
+	property bool opened: false
 	function pickPlayer() {
 		var list = Mpris.players.values
 		var pick = null
@@ -33,10 +34,12 @@ Rectangle {
 	readonly property var player: pickPlayer()
 
 	visible: player !== null
-	height: 28
+	height: 32
 	width: row.implicitWidth + 20
 	radius: Theme.radius
 	color: Theme.bgChip
+	border.color: Theme.line
+	border.width: 1
 
 	Row {
 		id: row
@@ -109,6 +112,10 @@ Rectangle {
 				color: Theme.fg
 				font.pixelSize: 12
 				text: chip.shortText()
+			}
+			MouseArea {
+				anchors.fill: parent
+				onClicked: chip.opened = !chip.opened			
 			}
 		}
 	}

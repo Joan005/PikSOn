@@ -31,4 +31,6 @@ Singleton {
     readonly property int sizeText: 12
     readonly property int sizeClock: 15
     readonly property int chipHeight: 28
+    readonly property var spines: ["#8a3b32", "#3d5566", "#a8793f", "#5e3d52", "#6f4a32"]
+    readonly property color wood: "#7a5638"
 }

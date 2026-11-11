@@ -10,7 +10,7 @@ PanelWindow {
 		left: true
 		right: true
 	}
-	implicitHeight: 25
+	implicitHeight: 40
 	color: "transparent"
 	
 	//ESTADO DE LA RED ACTUALIZADO POR NET.SH
@@ -122,10 +122,19 @@ PanelWindow {
 }
 	
 	Player {
+		id: playerChip
 		anchors.left: wsBox.right
 		anchors.leftMargin: 8
 		anchors.verticalCenter: wsBox.verticalCenter
 	}
+
+	PlayerPanel {
+		anchor.window: root
+		anchor.rect.x: playerChip.x
+		anchor.rect.y: root.height + 4
+		visible: playerChip.opened && playerChip.player !== null
+		player: playerChip.player
+		}
 
 	Rectangle {
 		id: wsBox
@@ -138,34 +147,80 @@ PanelWindow {
 		anchors.leftMargin: 8
 		anchors.verticalCenter: parent.verticalCenter
 		width: slots * cell + (slots -1) * gap + 2 * pad
-		height: 23
+		height: 32
 		radius: Theme.radius
 		color: Theme.bgChip
-	
+		border.color: Theme.line
+		border.width: 1
+
+		Rectangle {
+			anchors.bottom: parent.bottom
+			anchors.bottomMargin: 3
+			anchors.left: parent.left
+			anchors.right: parent.right
+			anchors.leftMargin: 5
+			anchors.rightMargin: 5
+			height: 2
+			radius: 1
+			color: Theme.wood
+			}		
+
 		Row {
 			anchors.left:parent.left
 			anchors.leftMargin:8
-			anchors.verticalCenter: parent.verticalCenter
+			anchors.bottom: parent.bottom
+			anchors.bottomMargin: 5
 			spacing: 5
 		
 
 			Repeater {
 				model : Hyprland.workspaces
 
-				Rectangle {
-					width: 24
-					height: 19
-					radius: Theme.radius
-					color: modelData.focused ? Theme.accent : Theme.bgCell	
-				
+		Item {
+			width: 24
+			height: 25
 
-				Text {
-					anchors.centerIn: parent
-					text: modelData.id
-					color: modelData.focused ? Theme.fgOnAccent : Theme.fg
-				}
+			Rectangle {
+				anchors.bottom: parent.bottom
+				anchors.horizontalCenter: parent.horizontalCenter
+				width: 22
+				height: modelData.focused ? 25 : 20
+				radius: 3
+				color: Theme.spines[((modelData.id - 1) % 5 + 5) % 5]
+				border.color: modelData.focused ? Theme.accent : Theme.line
+				border.width: 1
 
-				MouseArea {
+				Behavior on height { NumberAnimation { duration: 120 } }
+
+		Rectangle {
+			anchors.top: parent.top
+			anchors.topMargin: 2
+			width: parent.width
+			height: 1
+			color: Theme.accent
+			opacity: 0.7
+		}
+
+			Rectangle {
+			anchors.bottom: parent.bottom
+			anchors.bottomMargin: 2
+			width: parent.width
+			height: 1
+			color: Theme.accent
+			opacity: 0.7
+		}
+
+		Text {
+	anchors.centerIn: parent
+	text: ["I", "II", "III", "IV", "V"][((modelData.id - 1) % 5 + 5) % 5]
+	color: Theme.fg
+	font.family: Theme.fontSerif
+	font.pixelSize: 11
+	font.bold: modelData.focused
+		}
+	}
+
+			MouseArea {
 				anchors.fill: parent
 				onClicked: modelData.activate()
 				}
@@ -199,7 +254,7 @@ PanelWindow {
 		anchors.rightMargin: 8
 		anchors.verticalCenter: parent.verticalCenter
 		width: netText.implicitWidth + 16
-		height: 19
+		height: 32
 		radius: Theme.radius
 		color: root.netType === "none" ? Theme.bgCell : Theme.bgChip
 	
@@ -225,7 +280,7 @@ PanelWindow {
 		anchors.rightMargin: 6
 		anchors.verticalCenter: parent.verticalCenter
 		width: volText.implicitWidth + 16
-		height: 19
+		height: 32
 		radius: Theme.radius
 		color: (root.volMuted || root.volPercent < 0) ? Theme.bgCell : Theme.bgChip
 
@@ -254,69 +309,14 @@ PanelWindow {
 	}
 
 
-	//PANEL DESPLEGABLE DE RED
-	PopupWindow {
+		NetPanel {
 		id: netPanel
-		readonly property int panelWidth: 300
-
 		anchor.window: root
-		anchor.rect.x: root.width - panelWidth -8
+		anchor.rect.x: root.width - implicitWidth - 8
 		anchor.rect.y: root.height + 4
-		implicitWidth: panelWidth
-		implicitHeight: 215
 		visible: root.netOpen
-		color: "transparent"
-
-		Rectangle {
-			anchors.fill: parent
-			radius: Theme.radius
-			color: Theme.bgPopup
-			border.color: Theme.line
-			border.width: 1
-		
-		Column {
-			anchors.fill: parent
-			anchors.margins: 14
-			spacing: 8
-
-			Text {
-				text: root.info.estado === "ok" ? "Red . " + root.info.tipo : "Sin Conexion"
-				color: Theme.accent
-				font.pixelSize: 15
-				font.bold: true
-			}
-
-			Repeater {
-				model: root.info.estado === "ok" ? [
-					{ k: "Conexion", v: root.info.conexion },
-					{ k: "Dispositivo", v: root.info.dispositivo },
-					{ k: "IP", v: root.info.ip },
-					{ k: "Puerta de enlace", v: root.info.puerta },
-					{ k: "DNS", v: root.info.dns },
-					{ k: "MAC", v: root.info.mac },
-					{ k: "Velocidad", v: root.info.velocidad }
-				] : []
-				
-				Row {
-					spacing: 8
-					
-					Text {
-						width: 120
-						text: modelData.k
-						color: Theme.fgMuted
-						font.pixelSize: 12
-					}
-			
-					Text {
-						text: modelData.v ? modelData.v : "-"
-						color: Theme.fg
-						font.pixelSize: 12
-					}
-				}
-			}
+		info: root.info
 		}
-	}
-}
 }
 		
 
