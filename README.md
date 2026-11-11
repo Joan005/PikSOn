@@ -37,7 +37,7 @@ PikSOn/
         ├── NetPanel.qml     # Panel de red y Bluetooth: el medallón
         ├── Calendar.qml     # Calendario con agenda de tareas
         ├── PowerMenu.qml    # Menú de apagado
-        ├── Dock.qml         # Panel lateral: bandeja del sistema (apps en segundo plano)
+        ├── Dock.qml         # Dock lateral oculto: ventanas abiertas y bandeja (se despliega al pasar el ratón)
         └── scripts/
             ├── net.sh       # Resumen de red para el chip (debe ser ejecutable)
             ├── netinfo.sh   # Detalle de red para el panel (debe ser ejecutable)
@@ -53,7 +53,7 @@ PikSOn/
 | `zsh/.zprofile` | Lanza Hyprland al iniciar sesión en el TTY1 |
 | `.config/hypr/` | Configuración de Hyprland, incluidos el monitor, los atajos, los bordes y el cursor |
 | `.config/kitty/` | Configuración del terminal |
-| `.config/quickshell/` | Tema, barra, paneles, bandeja del sistema, fondo y scripts de apoyo |
+| `.config/quickshell/` | Tema, barra, paneles, dock lateral, fondo y scripts de apoyo |
 
 > 💡 Las carpetas de `.config/` replican la ruta que tendrían en `~/.config`. `zsh/` está fuera porque `.zshrc` y `.zprofile` viven en la carpeta personal; con GNU Stow se enlazarán automáticamente.
 
@@ -416,7 +416,7 @@ Uso básico: `Ctrl+O` guarda, `Ctrl+X` sale y `Ctrl+W` busca.
 
 > ⚠️ Si editas un fichero **por fuera** (con `sed`, por ejemplo) mientras sigue abierto en nano, el aviso **Modified** indica que nano tiene su propia copia sin guardar: al guardar desde nano, **sobrescribirá** el cambio externo. Cierra nano antes, o corrige dentro de nano (`Ctrl + \` busca y reemplaza).
 
-> 💡 **Antes de reemplazar un fichero grande** (`Bar.qml`), haz una copia fuera del repositorio: `cp $HOME/.config/quickshell/Bar.qml $HOME/Bar.qml.bak1`. Así, si algo sale mal, se vuelve atrás con un `cp`. Las copias viven en `~`, **nunca** dentro de `~/.config/quickshell` ni del repositorio.
+> 💡 **Antes de reemplazar un fichero grande** (`Bar.qml`, `Dock.qml`), haz una copia fuera del repositorio: `cp $HOME/.config/quickshell/Bar.qml $HOME/Bar.qml.bak1`. Así, si algo sale mal, se vuelve atrás con un `cp`. Las copias viven en `~`, **nunca** dentro de `~/.config/quickshell` ni del repositorio.
 
 ### Números de línea
 
@@ -599,7 +599,7 @@ hl.config({
 <a id="s9"></a>
 ## 9. 🧩 Quickshell: barra, paneles y fondo
 
-**Quickshell** es un kit para construir la interfaz del escritorio (barras, paneles, widgets) con QML. Aquí se usa para una barra superior **«solo texto»** (sin cajas ni adornos: workspaces en números romanos, música, reloj, tiempo, volumen, red, avisos y apagado), un panel desplegable por cada pieza, una columna lateral con la letra de la canción, un panel que hace de **bandeja del sistema** y el fondo de pantalla. Todo comparte colores, tamaños y **una única tipografía** (JetBrains Mono Nerd Font) a través de un **tema** ([9.13](#913-tema-themeqml)).
+**Quickshell** es un kit para construir la interfaz del escritorio (barras, paneles, widgets) con QML. Aquí se usa para una barra superior **«solo texto»** (sin cajas ni adornos: workspaces en números romanos, música, reloj, tiempo, volumen, red, avisos y apagado), un panel desplegable por cada pieza, una columna lateral con la letra de la canción, un **dock lateral oculto** (ventanas abiertas y bandeja del sistema, que aparece al pasar el ratón por el borde derecho) y el fondo de pantalla. Todo comparte colores, tamaños y **una única tipografía** (JetBrains Mono Nerd Font) a través de un **tema** ([9.13](#913-tema-themeqml)).
 
 ### 9.1 Instalación
 
@@ -634,7 +634,7 @@ La configuración vive en `~/.config/quickshell/` y se divide en piezas:
 | `NetPanel.qml` | Panel de red y Bluetooth, el medallón ([9.7](#97-panel-de-red-el-medallón)) |
 | `Calendar.qml` | Calendario con agenda de tareas ([9.12](#912-calendario-y-agenda)) |
 | `PowerMenu.qml` | Menú de apagado ([9.18](#918-menú-de-apagado)) |
-| `Dock.qml` | Bandeja del sistema ([9.4](#94-bandeja-del-sistema-panel-lateral)) |
+| `Dock.qml` | Dock lateral oculto: ventanas abiertas y bandeja ([9.4](#94-dock-lateral-ventanas-y-bandeja)) |
 | `scripts/net.sh` | Resumen de la red para el chip (`tipo\|dispositivo\|ip`) |
 | `scripts/netinfo.sh` | Detalle de la red para el panel (`clave=valor`) |
 | `scripts/trayquit.sh` | Cierra del todo la app de un icono de la bandeja |
@@ -667,7 +667,7 @@ Quickshell **recarga solo** al guardar un fichero. Si hay un error, aparece una 
 
 > 💡 **Altura:** la ventana de la barra mide **36 px** (`implicitHeight` en `Bar.qml`), con un degradado suave y una línea fina de latón de 1 px abajo. Los grupos de la derecha (tiempo, volumen, red, campana y apagado) se separan con un filete vertical de 1 px.
 
-> 💡 El panel lateral (`Dock.qml`) está anclado arriba, a la derecha y abajo: así reserva una franja y las ventanas no pasan por debajo de los iconos.
+> 💡 El dock (`Dock.qml`) **no reserva espacio**: está oculto salvo cuando se despliega, y se superpone a lo que haya debajo ([9.4](#94-dock-lateral-ventanas-y-bandeja)).
 
 ### 9.3 Arranque automático
 
@@ -684,35 +684,56 @@ end)
 
 > 💡 Para depurar un fallo de arranque, redirige la salida a un fichero: `hl.exec_cmd("qs > $HOME/qs-arranque.log 2>&1")`. Con Quickshell ya en marcha, `qs log` muestra los avisos.
 
-### 9.4 Bandeja del sistema (panel lateral)
+### 9.4 Dock lateral: ventanas y bandeja
 
-`Dock.qml` es la **bandeja del sistema**, como los iconos junto al reloj en Windows. Las aplicaciones se abren desde la terminal o con sus atajos (`Super + B`, `Super + D`...), y en el panel aparecen **solo las que siguen abiertas en segundo plano**.
+`Dock.qml` es un **dock oculto en el borde derecho**. En reposo **no se ve nada**: solo hay una franja invisible de 6 px pegada al borde. Al llevar el ratón al borde derecho, el dock aparece con una animación corta (180 ms) y muestra, en una columna centrada en vertical:
 
-Cada aplicación se anuncia por sí misma a la bandeja (protocolo *StatusNotifierItem*) y Quickshell las recoge con su módulo `Quickshell.Services.SystemTray`: entran y salen solas, sin configurar nada.
+| Zona | Qué muestra | Acciones |
+|---|---|---|
+| **Ventanas abiertas** | Un icono y el nombre (`appId`) de cada ventana; la **activa** lleva una raya dorada en el borde y las demás van atenuadas | **Clic izquierdo**: lleva la ventana al frente. **Clic derecho o central**: la cierra |
+| **Filete** | Una línea fina, solo si hay ventanas **y** bandeja a la vez | |
+| **Bandeja del sistema** | Las apps que siguen abiertas en segundo plano (icono, nombre y «Cerrar») | **Clic** en la fila: abre o muestra la app. **«Cerrar»**: termina la app del todo |
 
-| Acción | Efecto |
+Al sacar el ratón, el dock se oculta de nuevo. Si no hay ninguna ventana ni app en la bandeja, la ventana del dock no existe.
+
+Las ventanas las aporta `ToplevelManager` (módulo `Quickshell.Wayland`, con `appId`, `activated`, `activate()` y `close()`); la bandeja, `SystemTray` (módulo `Quickshell.Services.SystemTray`, protocolo *StatusNotifierItem*): las apps entran y salen solas, sin configurar nada. El icono de cada ventana sale de `DesktopEntries.heuristicLookup(appId)` y `Quickshell.iconPath()`; si no se encuentra, se dibuja la **inicial** del nombre.
+
+| Ajuste | Valor |
 |---|---|
-| **Clic izquierdo** en un icono | Abre o muestra la aplicación |
-| **Clic derecho** en un icono | Aparece el botón **Cerrar**, que termina la aplicación del todo |
-| Ninguna app en la bandeja | El panel no se muestra |
-
-El panel queda en la esquina **inferior derecha**, con un pequeño margen con los bordes. Los iconos van en una caja redondeada; el resto de la franja es transparente y deja pasar los clics (`mask: Region { item: box }`).
+| Ventana | `PanelWindow` anclada arriba, derecha y abajo; `implicitWidth` de 176 px (164 del dock desplegado y un margen) |
+| Franja de reposo | `railClosed: 6` (px). Si cuesta «cazar» el borde, subirla a 10 |
+| Ancho desplegado | `railOpen: 164` (px) |
+| Detección del ratón | `HoverHandler` (`hov.hovered`) |
+| Zona sensible | `mask: Region { item: rail }`: el resto de la ventana, transparente, deja pasar los clics |
+| Espacio reservado | **Ninguno**: `exclusionMode: ExclusionMode.Ignore`. Las ventanas llegan a su margen normal y el dock se superpone al desplegarse |
+| Capa | `WlrLayershell.layer: WlrLayer.Overlay`, para quedar **por encima de la columna de letra** y recibir bien el ratón |
+| Fondo | Transparente en reposo; al desplegarse, `#f52d1e12` con un filete de latón a la izquierda |
 
 ```qml
-Repeater {
-    model: SystemTray.items
+PanelWindow {
+    anchors { top: true; right: true; bottom: true }
+    exclusionMode: ExclusionMode.Ignore
+    WlrLayershell.layer: WlrLayer.Overlay
+    visible: ToplevelManager.toplevels.values.length > 0 || SystemTray.items.values.length > 0
+    mask: Region { item: rail }
 
-    delegate: MouseArea {
-        // clic izquierdo: modelData.activate()
-        // clic derecho: abre el panel con el botón "Cerrar"
-        IconImage { source: trayItem.modelData.icon }
+    Rectangle {
+        id: rail
+        width: hov.hovered ? win.railOpen : win.railClosed
+        clip: true
+        HoverHandler { id: hov }
+        // columna de ventanas, filete y bandeja (opacity: hov.hovered ? 1 : 0)
     }
 }
 ```
 
 El fichero completo está en `.config/quickshell/Dock.qml`.
 
-> 💡 **Qué aplicaciones aparecen:** solo las que usan la bandeja. **Discord** sí (al cerrar su ventana se queda en segundo plano, con la opción de minimizar a la bandeja activada en sus ajustes). **Brave** no: se cierra con su propia **X** o con `Super + Retroceso`. Para probar el panel con una app pequeña: `sudo pacman -S --needed network-manager-applet` y `nm-applet --indicator &`.
+> 💡 **Qué aparece en la bandeja:** solo las apps que la usan. **Discord** sí (al cerrar su ventana se queda en segundo plano, con la opción de minimizar a la bandeja activada en sus ajustes). **Brave** no usa la bandeja, pero **sí aparece como ventana abierta**. Para probar con una app pequeña: `sudo pacman -S --needed network-manager-applet` y `nm-applet --indicator &`.
+
+> 💡 Cada ventana tiene su propia fila: dos ventanas de kitty son dos filas. Agruparlas por aplicación está pendiente ([apartado 14](#s14)).
+
+> 💡 Esta es la **tercera versión** del dock: primero una cajita en la esquina inferior derecha que solo mostraba la bandeja; después se estudiaron otras opciones (bandeja en la barra, dock inferior flotante, barra inferior de texto, raíl lateral, bandeja plegable) y se eligió el **raíl lateral derecho que se despliega al pasar el ratón**, sin vista previa de iconos en reposo.
 
 #### El botón "Cerrar": `trayquit.sh`
 
@@ -758,15 +779,15 @@ Con el `id` que muestre, cierra esa aplicación:
 sh $HOME/.config/quickshell/scripts/trayquit.sh discord_status_icon_1
 ```
 
-El botón **Cerrar** del panel lanza exactamente esa orden con el identificador del icono pulsado:
+El texto **«Cerrar»** de cada fila de la bandeja lanza exactamente esa orden con el identificador del icono:
 
 ```qml
-Quickshell.execDetached(["sh", "-c", "$HOME/.config/quickshell/scripts/trayquit.sh \"$0\"", trayItem.modelData.id])
+Quickshell.execDetached(["sh", "-c", "$HOME/.config/quickshell/scripts/trayquit.sh \"$0\"", trayRow.modelData.id])
 ```
 
 > ⚠️ **El script debe ser ejecutable** (`chmod +x`), porque el botón lo lanza directamente. Un fichero creado con nano no lo es, y el clic en **Cerrar** no haría nada, aunque desde la terminal con `sh script` sí funcionara.
 
-> ⚠️ Es un cierre brusco, como "Finalizar tarea" en Windows: lo que la aplicación no haya guardado se pierde.
+> ⚠️ Es un cierre brusco, como "Finalizar tarea" en Windows: lo que la aplicación no haya guardado se pierde. (El clic derecho sobre una **ventana** es más suave: le pide que se cierre, como la X de su ventana.)
 
 > 💡 Para revisar la sintaxis del script sin ejecutarlo: `sh -n $HOME/.config/quickshell/scripts/trayquit.sh` (si no imprime nada, está bien).
 
@@ -824,6 +845,10 @@ Erratas reales encontradas al montar esta configuración:
 | **Los paneles no se cierran al pulsar fuera** | `HyprlandFocusGrab` **no funciona** en este Hyprland | Ventana «recogedora» transparente, ver [9.19](#919-cerrar-los-paneles-al-pulsar-fuera) |
 | La letra deja un hueco enorme arriba o abajo | `highlightRangeMode: ListView.StrictlyEnforceRange` obliga a centrar siempre la línea activa | `ListView.ApplyRange` |
 | `grep` con `\|` no encuentra nada | `grep` básico no entiende `\|` sin escapar | `grep -E "a\|b"` (con `-E`) y todo en **una** línea |
+| El dock no aparece al pasar el ratón | Está por debajo de otra ventana de capa (la columna de letra) | `WlrLayershell.layer: WlrLayer.Overlay` en `Dock.qml` |
+| El dock no existe en absoluto | No hay ventanas ni apps en la bandeja (`visible` es falso) | Abrir una ventana; es lo esperado |
+| Un icono del dock sale como una **letra** | No se encuentra el icono de esa app (`iconPath` vacío) | Es el comportamiento previsto; el nombre del `.desktop` debe coincidir con el `appId` (`hyprctl clients` lo muestra como `class`) |
+| Cuesta «cazar» el borde del dock | La franja de reposo (6 px) es muy fina | Subir `railClosed` a 10 en `Dock.qml` |
 
 Y en los scripts de shell y en la terminal:
 
@@ -1120,7 +1145,7 @@ La ventana de la barra es **transparente** (`color: "transparent"`) y no hay caj
 
 > ⚠️ **Limitación conocida (barra superior):** la ventana transparente sigue ocupando su franja entera: **reserva espacio** (las ventanas no llegan al borde) y puede bloquear clics sobre lo que haya debajo. Se resolverá con una máscara de entrada (pendiente, [apartado 14](#s14)).
 
-> 💡 El panel lateral y la columna de la letra ya usan la técnica: `mask: Region { item: ... }` limita la zona que recibe clics a la caja visible, y el resto deja pasar los clics.
+> 💡 El dock y la columna de la letra ya usan la técnica: `mask: Region { item: ... }` limita la zona que recibe clics a la caja visible, y el resto deja pasar los clics.
 
 ### 9.11 Chip de música en la barra
 
@@ -1256,8 +1281,8 @@ Singleton {
 | `line` | Bordes finos y filetes |
 | `fg` | Texto principal (vainilla) |
 | `fgMuted` | Texto secundario y etiquetas |
-| `accent` | El color de énfasis (dorado): workspace activo, deslizadores, línea activa de la letra |
-| `accent2` | Segundo énfasis (terracota) |
+| `accent` | El color de énfasis (dorado): workspace activo, deslizadores, línea activa de la letra, raya de la ventana activa del dock |
+| `accent2` | Segundo énfasis (terracota): «Cerrar» en la bandeja |
 | `ok` | Estado correcto (verde apagado) |
 | `fgOnAccent` | Texto que va **sobre** `accent` |
 | `radius`, `radiusSmall` | Esquinas de paneles y de las casillas pequeñas |
@@ -1282,7 +1307,7 @@ Rectangle {
 
 > 💡 **Cambiar los colores = editar este fichero.** Pero el terminal ([5.2](#52-configuración-propia-kittyconf)) y los bordes de las ventanas ([apartado 8](#otros-ajustes-de-hyprlandlua-bordes-y-separación)) tienen sus propias copias de la paleta y hay que cambiarlos aparte.
 
-> 💡 Algunos paneles (medallón de red, carátula del reproductor) usan además **colores propios** escritos en sus ficheros. Pasarlos al tema está pendiente ([apartado 14](#s14)).
+> 💡 Algunos paneles (medallón de red, carátula del reproductor) y el dock usan además **colores propios** escritos en sus ficheros. Pasarlos al tema está pendiente ([apartado 14](#s14)).
 
 ### 9.14 Panel del reproductor
 
@@ -1351,6 +1376,8 @@ ListView {
 > 💡 **`ApplyRange`, no `StrictlyEnforceRange`:** con el segundo, la línea activa se fuerza siempre al centro y la lista deja un hueco enorme al empezar y al terminar la canción. Con `ApplyRange` la lista arranca estática desde la primera línea.
 
 > 💡 Si la canción no tiene letra, se muestra «Sin letra» y la lista queda quieta.
+
+> 💡 **Convive con el dock:** el dock ([9.4](#94-dock-lateral-ventanas-y-bandeja)) está en la capa `Overlay` y no reserva espacio, así que, al desplegarse, **se superpone a la columna de letra** sin moverla.
 
 ### 9.16 Avisos y campana
 
@@ -1433,13 +1460,13 @@ Cada chip llama a `root.toggle("netOpen")`, `root.toggle("soundOpen")`, etc. Los
 <a id="s10"></a>
 ## 10. 📦 Programas instalados
 
-Los programas se instalan automáticamente con las listas de paquetes ([apartado 13](#s13)). Se abren desde la terminal o con sus atajos, y no desde el panel lateral. Notas de uso:
+Los programas se instalan automáticamente con las listas de paquetes ([apartado 13](#s13)). Se abren desde la terminal o con sus atajos; el dock lateral solo muestra y gestiona los que ya están abiertos. Notas de uso:
 
 | Programa | Cómo abrirlo | Nota |
 |---|---|---|
 | Kitty | `Super + Enter` | |
-| Brave | `Super + B` | No usa la bandeja: se cierra con su **X** o con `Super + Retroceso`. Lo que reproduce (YouTube, por ejemplo) aparece en el chip de música |
-| Discord | `Super + D` | Al cerrar la ventana queda en la bandeja ([9.4](#94-bandeja-del-sistema-panel-lateral)); clic derecho → **Cerrar** lo termina del todo. Necesita ≈ 940 px de ancho |
+| Brave | `Super + B` | No usa la bandeja: aparece en el dock como **ventana abierta** y se cierra con su **X**, con `Super + Retroceso` o con clic derecho en el dock. Lo que reproduce (YouTube, por ejemplo) aparece en el chip de música |
+| Discord | `Super + D` | Al cerrar la ventana queda en la bandeja del dock ([9.4](#94-dock-lateral-ventanas-y-bandeja)); **«Cerrar»** lo termina del todo. Necesita ≈ 940 px de ancho |
 
 > 💡 Desde una terminal, para abrir un programa sin dejarla ocupada: `discord & disown`.
 
@@ -1610,7 +1637,7 @@ Consultan y controlan el audio con PipeWire/WirePlumber:
 
 ### busctl
 
-Consulta el bus de mensajes del sistema (D-Bus). Lo usa `trayquit.sh` ([9.4](#94-bandeja-del-sistema-panel-lateral)); viene con systemd y no hace falta instalarlo:
+Consulta el bus de mensajes del sistema (D-Bus). Lo usa `trayquit.sh` ([9.4](#94-dock-lateral-ventanas-y-bandeja)); viene con systemd y no hace falta instalarlo:
 
 | Comando | Efecto |
 |---|---|
@@ -1640,8 +1667,8 @@ Consulta y controla Hyprland en marcha:
 | Comando | Efecto |
 |---|---|
 | `hyprctl monitors` | Resolución, frecuencia, **escala** y modos disponibles de cada monitor |
-| `hyprctl clients` | Las ventanas abiertas: clase, tamaño, posición, `pid` y si usan XWayland |
-| `hyprctl layers` | Las capas de Quickshell (barra, panel, fondo, letra, recogedora) |
+| `hyprctl clients` | Las ventanas abiertas: clase (`class`, que es el `appId` del dock), tamaño, posición, `pid` y si usan XWayland |
+| `hyprctl layers` | Las capas de Quickshell (barra, dock, fondo, letra, recogedora) |
 | `hyprctl reload` | Recarga la configuración |
 
 ### qs (Quickshell)
@@ -1795,7 +1822,7 @@ El fondo de pantalla viaja dentro de `.config/quickshell/` (`Wallpaper.qml` y `w
 
 Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1](#11-red-networkmanager)). Activa también el audio ([apartado 1.2](#12-audio-pipewire)): los paquetes de PipeWire llegan con `pkglist.txt`, pero sus servicios de usuario se activan con `systemctl --user enable --now pipewire pipewire-pulse wireplumber`. Ajusta la **zona horaria** ([1.3](#13-zona-horaria-y-hora)), que tampoco viaja con el repositorio.
 
-**Cambia la shell a zsh** (`chsh -s /usr/bin/zsh`; este ajuste **no viaja con el repositorio**) y **cierra la sesión del TTY** (`exit`) para iniciarla de nuevo: salir de Hyprland no basta ([apartado 12](#s12)). Con el `.zprofile` copiado, Hyprland arranca solo tras el login ([apartado 4.1](#41-arranque-automático-de-hyprland)); si no, entra con `start-hyprland`. La barra, los paneles, la bandeja del sistema y el fondo arrancan solos; la bandeja solo se ve cuando hay alguna aplicación en segundo plano, y el chip de música cuando hay algo sonando.
+**Cambia la shell a zsh** (`chsh -s /usr/bin/zsh`; este ajuste **no viaja con el repositorio**) y **cierra la sesión del TTY** (`exit`) para iniciarla de nuevo: salir de Hyprland no basta ([apartado 12](#s12)). Con el `.zprofile` copiado, Hyprland arranca solo tras el login ([apartado 4.1](#41-arranque-automático-de-hyprland)); si no, entra con `start-hyprland`. La barra y los paneles arrancan solos; el **dock** está oculto y aparece al llevar el ratón al borde derecho (y solo existe cuando hay alguna ventana o app en segundo plano); el chip de música se ve cuando hay algo sonando.
 
 **Datos personales:** la agenda (`~/.local/share/pikson/agenda.json`) **no** viaja con el repositorio. En un equipo nuevo empezará vacía; si se quiere conservar, se copia a mano.
 
@@ -1803,7 +1830,7 @@ Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1
 |---|---|
 | `pkglist.txt` | Paquetes de los repositorios oficiales |
 | `aur-pkglist.txt` | Paquetes del AUR |
-| `.config/` | Configuración de Hyprland, Quickshell (con su tema y sus paneles) y kitty |
+| `.config/` | Configuración de Hyprland, Quickshell (con su tema, sus paneles y el dock) y kitty |
 | `zsh/.zshrc` | Configuración de zsh (se copia a `~/.zshrc`) |
 | `zsh/.zprofile` | Arranque automático de Hyprland en el TTY1 (se copia a `~/.zprofile`) |
 
@@ -1822,7 +1849,7 @@ Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1
 
 **Hecho hasta ahora**
 
-Barra «solo texto» con workspaces en números romanos; paneles de música (con letra sincronizada y columna lateral), calendario con agenda, sonido, avisos, tiempo, red (medallón) y menú de apagado; cierre al pulsar fuera; tipografía única.
+Barra «solo texto» con workspaces en números romanos; paneles de música (con letra sincronizada y columna lateral), calendario con agenda, sonido, avisos, tiempo, red (medallón) y menú de apagado; cierre al pulsar fuera; tipografía única; dock lateral oculto con ventanas abiertas y bandeja.
 
 **Siguiente, por construir (en este orden)**
 
@@ -1839,6 +1866,13 @@ Barra «solo texto» con workspaces en números romanos; paneles de música (con
 - [ ] **Red y Bluetooth, fases 2 y 3 (hardware real)**: conectar las pestañas Wi-Fi y Bluetooth a `nmcli` y `bluetoothctl` en lugar de los datos de ejemplo; «Escanear redes» y «Escanear dispositivos»; la ficha de contraseña para las redes con candado; y que el botón de latón encienda y apague de verdad
 - [ ] **Reproductor**: probar el bucle con Spotify real (en Brave se ve atenuado) y la **cola** con la API web de Spotify (MPRIS no la expone)
 - [ ] **Animaciones**: 1) una transición común de apertura de los paneles (escala del 92 % al 100 % con aparición suave, aplicada al **contenido**); 2) movimiento discreto en el medallón de red; 3) cierres animados. Las animaciones en bucle solo deben ejecutarse **mientras el panel está abierto**: en la VM, con renderizado por software, pueden ir entrecortadas
+
+**Dock**
+
+- [ ] Agrupar las ventanas de una misma aplicación en una sola fila (hoy hay una fila por ventana)
+- [ ] Pasar los iconos de las ventanas a **monocromo** (hoy van a color) para casar con la barra
+- [ ] Comprobar el dock con la **columna de letra abierta** y con varias ventanas en distintos workspaces (¿mostrar solo las del workspace actual?)
+- [ ] Pasar al tema los colores propios del dock (`#f52d1e12`, filetes) y retirar el posible aviso de `iconPath` en `qs log`
 
 **Limpieza del código**
 
