@@ -27,11 +27,12 @@ PanelWindow {
     property bool powerOpen: false
     property bool soundOpen: false
     property bool notifOpen: false
+    property bool settingsOpen: false
     property bool weatherOpen: false
     property bool lyricsFloat: false
     property var info: ({})
 
-    readonly property bool anyOpen: calOpen || netOpen || powerOpen || soundOpen || notifOpen || weatherOpen || playerChip.opened
+    readonly property bool anyOpen: calOpen || netOpen || powerOpen || soundOpen || notifOpen || weatherOpen || settingsOpen || playerChip.opened
 
     // volumen (-1 = sin datos)
     property int volPercent: -1
@@ -49,6 +50,7 @@ PanelWindow {
         powerOpen = false
         soundOpen = false
         notifOpen = false
+        settingsOpen = false
         weatherOpen = false
         playerChip.opened = false
     }
@@ -619,6 +621,35 @@ PanelWindow {
         }
 
         Item {
+            id: gearChip
+            width: 22
+            height: 28
+
+            Text {
+                anchors.centerIn: parent
+                text: "\uf013"
+                color: gearArea.containsMouse || root.settingsOpen ? Theme.accent : Theme.fg
+                font.family: Theme.fontIcons
+                font.pixelSize: 13
+            }
+
+            MouseArea {
+                id: gearArea
+                anchors.fill: parent
+                hoverEnabled: true
+                onClicked: root.toggle("settingsOpen")
+            }
+        }
+
+        Rectangle {
+            anchors.verticalCenter: parent.verticalCenter
+            width: 1
+            height: 14
+            color: Theme.line
+            opacity: 0.5
+        }
+
+        Item {
             id: powerChip
             width: 22
             height: 28
@@ -682,6 +713,14 @@ PanelWindow {
     NotifToasts {
         items: root.toastList
         onExpired: (id) => root.hideToast(id)
+    }
+
+    SettingsPanel {
+        anchor.window: root
+        anchor.rect.x: root.width - implicitWidth - 8
+        anchor.rect.y: root.height + 4
+        visible: root.settingsOpen
+        onCloseRequested: root.settingsOpen = false
     }
 
     PowerMenu {
