@@ -1,6 +1,6 @@
 # 🎩 PikSOn — Arch Linux + Hyprland
 
-Guía de instalación **manual (sin script)** de mi entorno de trabajo en Arch Linux con Hyprland y Quickshell.
+Mi entorno de trabajo en Arch Linux con Hyprland y Quickshell: un **script de instalación (`install.sh`)** que lo monta sobre un Arch recién instalado, y esta guía, que explica **a mano** cada pieza (el procedimiento manual equivalente).
 
 <a id="estructura"></a>
 ## 🗂️ Estructura del repositorio
@@ -8,12 +8,16 @@ Guía de instalación **manual (sin script)** de mi entorno de trabajo en Arch L
 ```
 PikSOn/
 ├── README.md                # Este manual
+├── install.sh               # Instalador: paquetes, configuración, servicios y ajustes (debe ser ejecutable)
 ├── pkglist.txt              # Paquetes de los repositorios oficiales
 ├── aur-pkglist.txt          # Paquetes del AUR
 ├── zsh/
 │   ├── .zshrc               # Configuración de zsh (se copia a ~/.zshrc)
 │   └── .zprofile            # Arranque automático de Hyprland (se copia a ~/.zprofile)
 └── .config/                 # Configuraciones (se copian a ~/.config)
+    ├── gtk-3.0/
+    │   ├── settings.ini     # Aplicaciones GTK: tema oscuro, tipografía y cursor
+    │   └── gtk.css          # Aspecto de Thunar y demás apps GTK (Pergamino nocturno, «extensión de la barra»)
     ├── hypr/
     │   └── hyprland.lua     # Hyprland: monitor, atajos, bordes, cursor, terminal y arranque automático
     ├── kitty/
@@ -49,17 +53,19 @@ PikSOn/
 | Elemento | Descripción |
 |---|---|
 | `README.md` | Manual de instalación y uso |
+| `install.sh` | Instala el entorno completo sobre un Arch recién instalado ([apartado 13](#s13)) |
 | `pkglist.txt` | Paquetes oficiales, generada con `pacman -Qqen` |
 | `aur-pkglist.txt` | Paquetes del AUR, generada con `pacman -Qqem` |
 | `zsh/.zshrc` | Shell zsh con plugins y starship |
 | `zsh/.zprofile` | Lanza Hyprland al iniciar sesión en el TTY1 |
+| `.config/gtk-3.0/` | Aspecto de Thunar y de las aplicaciones GTK ([9.21](#921-thunar-y-el-aspecto-de-las-aplicaciones-gtk)) |
 | `.config/hypr/` | Configuración de Hyprland, incluidos el monitor, los atajos, los bordes y el cursor |
 | `.config/kitty/` | Configuración del terminal |
 | `.config/quickshell/` | Tema, barra, paneles, ajustes, dock lateral, fondo y scripts de apoyo |
 
 > 💡 Las carpetas de `.config/` replican la ruta que tendrían en `~/.config`. `zsh/` está fuera porque `.zshrc` y `.zprofile` viven en la carpeta personal; con GNU Stow se enlazarán automáticamente.
 
-> ⚠️ **`~/.config/hypr/monitors.lua` NO está en el repositorio a propósito**: lo genera el panel de Pantallas ([9.20](#920-ajustes-la-tuerca-y-el-panel-de-pantallas)) y es propio de cada equipo (nombres de monitor, resoluciones y escalas de esa máquina). Por eso, de la carpeta de Hyprland se copia **solo `hyprland.lua`** ([11.5](#115-subir-cambios)).
+> ⚠️ **`~/.config/hypr/monitors.lua` NO está en el repositorio a propósito**: lo genera el panel de Pantallas ([9.20](#920-ajustes-la-tuerca-y-el-panel-de-pantallas)) y es propio de cada equipo (nombres de monitor, resoluciones y escalas de esa máquina). Por eso, de la carpeta de Hyprland se copia **solo `hyprland.lua`** ([11.5](#115-subir-cambios)). Tampoco se sube la carpeta `gtk-3.0` entera (guarda marcadores personales): solo `settings.ini` y `gtk.css`.
 
 ---
 
@@ -72,11 +78,11 @@ PikSOn/
 6. [Editor de texto](#s6)
 7. [Navegador Brave y atajo de teclado](#s7)
 8. [Atajos de teclado personalizados](#s8)
-9. [Quickshell: barra, paneles y fondo](#s9)
+9. [Quickshell: barra, paneles, fondo y Thunar](#s9)
 10. [Programas instalados](#s10)
 11. [Git y GitHub](#s11)
 12. [Herramientas de apoyo](#s12)
-13. [Restaurar el entorno en otro equipo](#s13)
+13. [Restaurar el entorno en otro equipo (`install.sh`)](#s13)
 14. [Pendiente](#s14)
 
 ---
@@ -96,9 +102,11 @@ ping archlinux.org
 
 > ⌨️ La distribución del teclado se mantiene en **inglés (US)**: es una decisión deliberada.
 
+> 💡 Si más adelante `pacman` falla con **`failed retrieving file ... 404`**, la base de datos de paquetes está anticuada: se arregla con una actualización completa (`sudo pacman -Syu`). Nunca se debe instalar sobre una lista vieja ni actualizar «solo la lista» (`-Sy`).
+
 ### 1.1 Red: NetworkManager
 
-`archinstall` puede dejar la red gestionada por `systemd-networkd`. Se usa **NetworkManager** porque es el estándar en portátiles (Wi-Fi) y ofrece `nmcli`, que sirve igual para cable y Wi-Fi: la misma instalación vale para una VM, una torre con Ethernet y un portátil.
+`archinstall` puede dejar la red gestionada por `systemd-networkd`. Se usa **NetworkManager** porque es el estándar en portátiles (Wi-Fi) y ofrece `nmcli`, que sirve igual para cable y Wi-Fi: la misma instalación vale para una VM, una torre con Ethernet y un portátil. (Con `archinstall` se puede elegir NetworkManager directamente; `install.sh` lo deja activado de todos modos.)
 
 > ⚠️ Haz antes una **instantánea de la VM**: al cambiar de gestor, la interfaz pierde su IP hasta reiniciar o reconectarla.
 
@@ -167,7 +175,7 @@ sudo timedatectl set-ntp true     # recomendado en hardware real
 
 Quickshell lee la zona horaria al arrancar: tras cambiarla, reinícialo (`pkill qs` y vuelve a lanzar `qs`), o cierra sesión y vuelve a entrar.
 
-> 💡 Es un ajuste **del sistema**, no un fichero del repositorio: git no lo guarda, y hay que repetirlo en cada equipo nuevo (como `chsh`, [apartado 12](#s12)).
+> 💡 Es un ajuste **del sistema**, no un fichero del repositorio: git no lo guarda, y hay que repetirlo en cada equipo nuevo (como `chsh`, [apartado 12](#s12)). `install.sh` lo aplica por ti.
 
 > 💡 `set-ntp true` activa la sincronización automática con internet. En una VM no hace falta, porque VirtualBox ya sincroniza la hora con la del anfitrión.
 
@@ -187,7 +195,7 @@ sudo pacman -S hyprland
 <a id="s3"></a>
 ## 3. 🖥️ Ajustes para máquina virtual (VirtualBox)
 
-> ⚠️ Solo si trabajas desde una VM. Hazlo **después** de instalar Hyprland.
+> ⚠️ Solo si trabajas desde una VM. Hazlo **después** de instalar Hyprland. (`install.sh --vm` lo hace por ti.)
 
 **Paquetes** (si habías instalado antes las herramientas de QEMU, retíralas):
 
@@ -206,13 +214,13 @@ sudo systemctl enable --now vboxservice
 | Memoria de vídeo | **128 MB** (el máximo) |
 | Número de monitores | 1 (o **2** para probar el arrastre de pantallas, [9.20](#920-ajustes-la-tuerca-y-el-panel-de-pantallas)) |
 
-> 💡 Los programas que dibujan con OpenGL (kitty, Quickshell) fallan en VirtualBox con errores como `invalid arguments for wl_surface#attach` o `Could not create EGL surface`. La solución es la variable `LIBGL_ALWAYS_SOFTWARE=1` (apartados [5](#s5) y [9](#s9)). **No debe usarse en hardware real.**
+> 💡 Los programas que dibujan con OpenGL (kitty, Quickshell, `imv`) fallan en VirtualBox con errores como `invalid arguments for wl_surface#attach` o `Could not create EGL surface`. La solución es la variable `LIBGL_ALWAYS_SOFTWARE=1` (apartados [5](#s5), [9](#s9) y [10](#s10)). **No debe usarse en hardware real.**
 
 > 💡 En la VM solo se puede probar la conexión **por cable** (adaptador virtual). El Wi-Fi y el Bluetooth requieren hardware real.
 
 > 💡 El audio virtual de VirtualBox tiene límites (volumen mínimo ≈ 45 %, silencio sin efecto y quizá sin micrófono): ver [9.8](#98-chip-de-volumen-y-panel-de-sonido).
 
-> 💡 Los diálogos de archivos de GTK (por ejemplo, "Guardar como" en Brave) pueden verse mal en la VM. Si no se puede guardar, descarga con `curl` ([9.9](#99-fondo-de-pantalla)).
+> 💡 Los diálogos de archivos de GTK (por ejemplo, "Guardar como" en Brave) pueden verse mal en la VM; los portales de escritorio ([9.21](#921-thunar-y-el-aspecto-de-las-aplicaciones-gtk)) los mejoran. Si no se puede guardar, descarga con `curl` ([9.9](#99-fondo-de-pantalla)).
 
 > 💡 **Spotify de escritorio no dibuja su ventana en la VM** (el proceso arranca, pero no aparece ventana ni se anuncia): es una limitación de la máquina virtual sin GPU. Ver [9.11](#911-chip-de-música-en-la-barra).
 
@@ -307,7 +315,7 @@ grep -n "local terminal" hyprland.lua
 
 Recarga saliendo con `Super + M` y ejecutando de nuevo `start-hyprland`. Prueba `Super + Q`.
 
-> ⚠️ `LIBGL_ALWAYS_SOFTWARE=1` solo es necesario en la VM. **No lo uses en hardware real.**
+> ⚠️ `LIBGL_ALWAYS_SOFTWARE=1` solo es necesario en la VM. **No lo uses en hardware real** (`install.sh --real` lo quita de `hyprland.lua`).
 
 ### 5.2 Configuración propia: `kitty.conf`
 
@@ -384,7 +392,7 @@ Abre una terminal nueva (`Super + Enter`) o recarga la actual con **`Ctrl + Shif
 
 > 💡 No mezcles `foreground` y `background`: un tono pensado para el texto puesto en `background` da una ventana pálida.
 
-> 💡 **Los colores están repetidos en tres sitios**: `Theme.qml` (barra y paneles), `kitty.conf` (terminal) y `hyprland.lua` (bordes de las ventanas). Si cambias de paleta, hay que tocar los tres a mano ([apartado 14](#s14)).
+> 💡 **Los colores están repetidos en tres sitios**: `Theme.qml` (barra y paneles), `kitty.conf` (terminal) y `hyprland.lua` (bordes de las ventanas); y una cuarta copia en `gtk.css` (Thunar). Si cambias de paleta, hay que tocarlos a mano ([apartado 14](#s14)).
 
 > 💡 Para ver la configuración que kitty está aplicando y sus errores: **`Ctrl + Shift + F6`** dentro de una terminal de kitty (la opción `kitty --debug-config` ya no existe en kitty 0.49).
 
@@ -414,6 +422,8 @@ Uso básico: `Ctrl+O` guarda, `Ctrl+X` sale y `Ctrl+W` busca.
 | Guardar y salir | `Ctrl + O`, `Enter`, `Ctrl + X` |
 
 > ⚠️ Pega **solo el contenido del fichero**. Las líneas `cat > fichero <<'EOF'` y `EOF` son parte de otro método (escribir desde la terminal) y **no deben pegarse dentro de nano**: `EOF` quedaría escrito en el fichero y lo rompería.
+
+> ⚠️ **Comprueba siempre qué has pegado.** Si el portapapeles aún tenía otro contenido (por ejemplo, un trozo de CSS), el fichero acaba con eso en lugar de con lo esperado. Un `head -3 fichero` justo después de guardar lo delata a la primera (así falló un `install.sh` con *«syntax error near unexpected token `('»* en la línea 1).
 
 > 💡 Para ficheros largos, pegar es más fiable que teclear: las erratas de teclear a mano (letras que faltan o sobran, espacios, líneas partidas) son la causa de casi todos los fallos de la tabla del [apartado 9.5](#95-solución-de-problemas).
 
@@ -447,7 +457,7 @@ cat -n $HOME/.config/quickshell/Bar.qml | sed -n '124,190p'
 
 > 💡 La búsqueda **no distingue mayúsculas de minúsculas** y encuentra el texto aunque sea parte de otro más largo (`height: 28` también casaría con `implicitHeight: 28`). Para saber cuántas coincidencias habrá, conviene contarlas antes con `grep -n "texto" fichero`.
 
-> 💡 «Replace with» solo admite **una línea**. Para insertar varias, se va a la línea con `Ctrl + _` (o se busca con `Ctrl + W`), se pulsa `Home` o `End` y se pega el bloque.
+> 💡 «Replace with» solo admite **una línea**. Para insertar varias, se va a la línea con `Ctrl + _` (o se busca con `Ctrl + W`), se pulsa `Home` o `End` y se pega el bloque. `Alt + /` lleva al **final** del fichero.
 
 ### Cortar o sustituir un bloque de líneas
 
@@ -470,7 +480,7 @@ cat -n $HOME/.config/quickshell/Bar.qml | sed -n '124,190p'
 <a id="s7"></a>
 ## 7. 🌐 Navegador Brave y atajo de teclado
 
-Brave está en el **AUR**, por lo que primero hace falta instalar `yay`:
+Brave está en el **AUR**, por lo que primero hace falta instalar `yay` (`install.sh` lo hace solo):
 
 ```bash
 sudo pacman -S --needed base-devel git
@@ -501,16 +511,21 @@ Añadidos a `~/.config/hypr/hyprland.lua`:
 | Atajo | Acción | Línea |
 |---|---|---|
 | `Super + Enter` | Abrir terminal (kitty) | `hl.bind(mainMod .. " + RETURN", hl.dsp.exec_cmd(terminal))` |
+| `Super + E` | Abrir el gestor de archivos (**Thunar**, [9.21](#921-thunar-y-el-aspecto-de-las-aplicaciones-gtk)) | `hl.bind(mainMod .. " + E", hl.dsp.exec_cmd(fileManager))` |
 | `Super + B` | Abrir Brave | `hl.bind(mainMod .. " + B", hl.dsp.exec_cmd("brave"))` |
 | `Super + D` | Abrir Discord | `hl.bind(mainMod .. " + D", hl.dsp.exec_cmd("discord"))` |
 | `Super + Retroceso` | Cerrar la ventana activa | `hl.bind(mainMod .. " + BACKSPACE", hl.dsp.window.close())` |
 | `Super + Shift + E` | Salir de Hyprland | `hl.bind(mainMod .. " + SHIFT + E", hl.dsp.exit())` |
+| `Super + clic izquierdo` + arrastrar | **Mover** la ventana | (viene en la configuración por defecto) |
+| `Super + clic derecho` + arrastrar | **Redimensionar** la ventana desde cualquier punto (desde la esquina más cercana) | (viene en la configuración por defecto) |
 
 > 💡 `Super + Q` queda libre (antes abría la terminal y `Super + M` salía de Hyprland, ambos sustituidos).
 
 > 💡 Los atajos de **workspaces** (`Super + 1…5` para ir a un escritorio y `Super + Shift + 1…5` para mover la ventana activa) llegan solo hasta el **5**, igual que la barra ([9.2](#92-ficheros-de-configuración)).
 
 > 💡 La configuración generada ya incluye las teclas multimedia (volumen, brillo y reproducción). Para que funcionen, deben estar instalados `wpctl` (wireplumber, [apartado 1.2](#12-audio-pipewire)), `brightnessctl` y `playerctl`.
+
+> 💡 Si en una ventana en mosaico se redimensiona con el ratón, las ventanas vecinas se ajustan solas; en una ventana flotante cambia su tamaño libremente. Para arrastrar desde los bordes (en lugar de con `Super`) existe `resize_on_border` en el bloque `general`, pero aquí no se usa.
 
 ### Otros ajustes de `hyprland.lua`: tamaño del cursor
 
@@ -541,7 +556,7 @@ echo "tema=[$XCURSOR_THEME] tamaño=[$XCURSOR_SIZE]"     # tamaño=[16]
 
 > 💡 El tema queda vacío (se usa el de por defecto). Para cambiarlo: `hl.env("XCURSOR_THEME", "NombreDelTema")` con el nombre de una carpeta de `/usr/share/icons`.
 
-> 💡 Algunas aplicaciones GTK (como Brave) pueden conservar su propio tamaño de cursor; se ajusta aparte en la configuración de GTK.
+> 💡 Algunas aplicaciones GTK (como Brave) pueden conservar su propio tamaño de cursor; se ajusta aparte con `gsettings` y `settings.ini` ([9.21](#921-thunar-y-el-aspecto-de-las-aplicaciones-gtk)).
 
 ### Otros ajustes de `hyprland.lua`: monitor, escala y frecuencia
 
@@ -619,9 +634,9 @@ hl.config({
 ---
 
 <a id="s9"></a>
-## 9. 🧩 Quickshell: barra, paneles y fondo
+## 9. 🧩 Quickshell: barra, paneles, fondo y Thunar
 
-**Quickshell** es un kit para construir la interfaz del escritorio (barras, paneles, widgets) con QML. Aquí se usa para una barra superior **«solo texto»** (sin cajas ni adornos: workspaces en números romanos, música, reloj, tiempo, volumen, red, avisos, ajustes y apagado), un panel desplegable por cada pieza, una columna lateral con la letra de la canción, un **dock lateral oculto** (ventanas abiertas y bandeja del sistema, que aparece al pasar el ratón por el borde derecho) y el fondo de pantalla. Todo comparte colores, tamaños y **una única tipografía** (JetBrains Mono Nerd Font) a través de un **tema** ([9.13](#913-tema-themeqml)).
+**Quickshell** es un kit para construir la interfaz del escritorio (barras, paneles, widgets) con QML. Aquí se usa para una barra superior **«solo texto»** (sin cajas ni adornos: workspaces en números romanos, música, reloj, tiempo, volumen, red, avisos, ajustes y apagado), un panel desplegable por cada pieza, una columna lateral con la letra de la canción, un **dock lateral oculto** (ventanas abiertas y bandeja del sistema, que aparece al pasar el ratón por el borde derecho) y el fondo de pantalla. Todo comparte colores, tamaños y **una única tipografía** (JetBrains Mono Nerd Font) a través de un **tema** ([9.13](#913-tema-themeqml)). El gestor de archivos, Thunar, se viste con el mismo aspecto ([9.21](#921-thunar-y-el-aspecto-de-las-aplicaciones-gtk)).
 
 ### 9.1 Instalación
 
@@ -879,6 +894,11 @@ Erratas reales encontradas al montar esta configuración:
 | Pantalla recortada tras probar `monitor-set.sh` | Se copió un **ejemplo** (`1920x1080`) en lugar de la resolución real (`1920x955`) | `monitor-set.sh NOMBRE 1920x955@60 0x0 1.25` o `hyprctl reload`; usar siempre los valores que da `hyprctl monitors -j` |
 | El rectángulo del esquema de pantallas sobresale de su caja | El encuadre se calculaba con las medidas actuales y no con las pendientes (rotación, escala) | `recalcFrame()` con `dimsOf()` y `clip: true` en la caja |
 | «Replace with» de nano no admite varias líneas | El campo es de una sola línea | Ir a la línea con `Ctrl + _` y pegar el bloque |
+| **Thunar (o cualquier app GTK) ignora la tipografía** de `settings.ini` | GTK da prioridad a **GSettings**, que tiene su propia tipografía | Regla `* { font-family: ... }` en `gtk.css` y `gsettings set ... font-name` ([9.21](#921-thunar-y-el-aspecto-de-las-aplicaciones-gtk)) |
+| Los **nombres de archivo** de Thunar no cambian de tipografía | La vista de iconos no responde a `iconview` | Regla con el comodín `*` en `gtk.css` |
+| La **franja inferior de la papelera** de Thunar sigue gris | Es una barra de avisos que no responde a `infobar`/`actionbar` | Pendiente: averiguar el nodo con `GTK_DEBUG=interactive thunar` ([9.21](#921-thunar-y-el-aspecto-de-las-aplicaciones-gtk)) |
+| Doble clic en una imagen abre **Brave** | No hay visor de imágenes y Brave se ofrece a abrirlas | Instalar `imv` y asociarlo con `xdg-mime` ([9.21](#921-thunar-y-el-aspecto-de-las-aplicaciones-gtk)) |
+| `imv` no abre la imagen al lanzarlo desde Thunar (solo en VM) | Thunar no hereda `LIBGL_ALWAYS_SOFTWARE=1` | Lanzador propio en `~/.local/share/applications/imv.desktop` con `Exec=env LIBGL_ALWAYS_SOFTWARE=1 imv %F` |
 
 Y en los scripts de shell y en la terminal:
 
@@ -906,6 +926,8 @@ Y en los scripts de shell y en la terminal:
 | Discord o Brave se recortan | Escala del monitor demasiado alta (1,67 en la VM) | `scale = "1.25"` ([apartado 8](#otros-ajustes-de-hyprlandlua-monitor-escala-y-frecuencia)) |
 | `notify-send` da error | Falta `libnotify` o no hay servidor de avisos en marcha | `sudo pacman -S --needed libnotify` y comprobar que Quickshell está en marcha |
 | `monitor-set.sh` responde `keyword: ... \| eval: ...` en lugar de `ok` | Hyprland rechazó el monitor, el modo o la escala | Leer el mensaje; comprobar nombre, `WxH@Hz` y que la escala sea válida |
+| `error: failed retrieving file ... 404` al instalar con `pacman` | Base de datos de paquetes anticuada: esas versiones ya no están en los espejos | `sudo pacman -Syu` y repetir la instalación |
+| `install.sh: syntax error near unexpected token '('` en la línea 1 | Al pegar, el portapapeles tenía otro contenido (CSS) y el fichero **no contiene el script** | `head -3 install.sh`; volver a pegar el script completo (`Alt+\`, `Alt+T`) |
 
 > 💡 Para ficheros largos, lo más seguro es reemplazarlos enteros ([apartado 6](#s6)) en lugar de retocar llaves a mano.
 
@@ -1340,7 +1362,7 @@ Rectangle {
 
 > 💡 **Formato de color:** en QML es `#AARRGGBB` (el alfa va **delante**: `#f04a382a` es casi opaco). En Hyprland es `rgba(RRGGBBAA)` (el alfa va **detrás**).
 
-> 💡 **Cambiar los colores = editar este fichero.** Pero el terminal ([5.2](#52-configuración-propia-kittyconf)) y los bordes de las ventanas ([apartado 8](#otros-ajustes-de-hyprlandlua-bordes-y-separación)) tienen sus propias copias de la paleta y hay que cambiarlos aparte.
+> 💡 **Cambiar los colores = editar este fichero.** Pero el terminal ([5.2](#52-configuración-propia-kittyconf)), los bordes de las ventanas ([apartado 8](#otros-ajustes-de-hyprlandlua-bordes-y-separación)) y Thunar (`gtk.css`, [9.21](#921-thunar-y-el-aspecto-de-las-aplicaciones-gtk)) tienen sus propias copias de la paleta y hay que cambiarlos aparte.
 
 > 💡 Algunos paneles (medallón de red, carátula del reproductor), el dock y el panel de Pantallas usan además **colores propios** escritos en sus ficheros. Pasarlos al tema está pendiente ([apartado 14](#s14)).
 
@@ -1587,6 +1609,96 @@ hyprctl monitors -j | grep -E '"width"|"height"|"scale"'
 
 > 💡 El monitor **desactivado** no aparece en `hyprctl monitors -j`, por lo que el panel actual no puede volver a encender uno apagado. Por eso encender y apagar monitores queda para otra fase ([apartado 14](#s14)).
 
+### 9.21 Thunar y el aspecto de las aplicaciones GTK
+
+**Thunar** es el gestor de archivos (`Super + E`): gráfico, ligero y con arrastrar y soltar (se eligió frente a Yazi, de terminal, por Discord, Brave, los USB y la partición de Windows). Como es una aplicación GTK, su aspecto no sale de `Theme.qml`, sino de dos ficheros de `~/.config/gtk-3.0/`.
+
+```bash
+sudo pacman -S --needed thunar thunar-volman gvfs tumbler xdg-desktop-portal-gtk xdg-desktop-portal-hyprland gnome-themes-extra
+```
+
+| Paquete | Función |
+|---|---|
+| `thunar` | El gestor de archivos |
+| `thunar-volman` y `gvfs` | Montar USB y discos con un clic; la papelera |
+| `tumbler` | Miniaturas de imágenes y vídeos |
+| `xdg-desktop-portal-gtk` y `xdg-desktop-portal-hyprland` | **Portales de escritorio**: arreglan los diálogos «Guardar como» y «Abrir» de Brave y permiten compartir pantalla en Discord (tras instalarlos, cerrar sesión y volver a entrar) |
+| `gnome-themes-extra` | El tema base **Adwaita-dark** |
+
+#### `Super + E`
+
+`hyprland.lua` ya enlazaba `Super + E` con una variable, `fileManager`, que valía `"dolphin"`. Se cambia en una línea (la 43):
+
+```bash
+sed -i 's/local fileManager = "dolphin"/local fileManager = "thunar"/' $HOME/.config/hypr/hyprland.lua
+grep -n "fileManager" $HOME/.config/hypr/hyprland.lua      # 43: local fileManager = "thunar"
+```
+
+#### Los dos ficheros de aspecto
+
+`~/.config/gtk-3.0/settings.ini` (tema oscuro, tipografía y cursor):
+
+```ini
+[Settings]
+gtk-theme-name=Adwaita-dark
+gtk-application-prefer-dark-theme=1
+gtk-font-name=JetBrainsMono Nerd Font 10
+gtk-cursor-theme-name=Adwaita
+gtk-cursor-theme-size=16
+```
+
+`~/.config/gtk-3.0/gtk.css` repinta Thunar como una **extensión de la barra superior** («solo texto»). Está en el repositorio, y estas son sus ideas:
+
+| Elemento | Estilo |
+|---|---|
+| Ventana | Marrón oscuro **semitransparente** (`rgba(45, 30, 18, 0.90)`), que deja ver el fondo |
+| Barra de menús | Texto atenuado, con el mismo degradado de la barra; dorado al pasar el ratón |
+| Barra de herramientas | Sin cajas, con un filete de latón debajo |
+| Barra de dirección | Solo una línea fina inferior, que se vuelve dorada al enfocarla |
+| Panel lateral | Texto atenuado; el elegido, en **dorado con una raya** a la izquierda (como el dock) |
+| Selección en la lista | Relleno dorado translúcido (`rgba(226, 181, 100, 0.22)`), como el calendario |
+| Barras de desplazamiento | Finas y de latón |
+| Menús contextuales | Fondo `#4a382a`, borde `#8c6d4f` y esquinas de 8 px |
+| **Tipografía** | `* { font-family: "JetBrainsMono Nerd Font"; }` y `.view { font-size: 12px; }` |
+
+Los colores son los de `Theme.qml` (`#34261b`, `#2d1e12`, `#f6ebcf`, `#d0b992`, `#e2b564`, `#8c6d4f`), definidos con `@define-color` al principio del fichero.
+
+> ⚠️ **GTK da prioridad a GSettings sobre `settings.ini`.** Por eso Thunar **ignoraba la tipografía** del `settings.ini`: GSettings tiene la suya por defecto. Se arregla de dos formas: la regla con el comodín `*` en `gtk.css` (que manda siempre) y fijando GSettings, que vale para todas las aplicaciones GTK:
+> ```bash
+> sudo pacman -S --needed dconf gsettings-desktop-schemas
+> gsettings set org.gnome.desktop.interface font-name 'JetBrainsMono Nerd Font 10'
+> gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
+> gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark'
+> gsettings set org.gnome.desktop.interface cursor-size 16
+> ```
+> Estos ajustes **no son ficheros del repositorio**: `install.sh` los ejecuta ([apartado 13](#s13)).
+
+> 💡 Una regla con `iconview` o `treeview` **no** cambia la tipografía de los nombres de archivo de la vista de iconos: hace falta el comodín `*`.
+
+#### Visor de imágenes: `imv`
+
+Sin visor, las imágenes se abrían en Brave (que se ofrece como lector). Se instala `imv` (ligero y de teclado, pensado para Wayland) y se asocia a los tipos de imagen:
+
+```bash
+sudo pacman -S --needed imv
+xdg-mime default imv.desktop image/jpeg image/png image/webp image/gif image/bmp image/svg+xml
+xdg-mime query default image/jpeg      # debe decir: imv.desktop
+```
+
+Manejo: flechas para cambiar de imagen, `+` y `-` para el zoom, `f` pantalla completa y `q` para salir. Las asociaciones se guardan en `~/.config/mimeapps.list`, que no contiene datos privados.
+
+> ⚠️ **Solo en la VM:** `imv` no arranca al lanzarlo Thunar, porque no hereda `LIBGL_ALWAYS_SOFTWARE=1`. Se resuelve con un lanzador propio que lleva la variable (`install.sh --vm` lo crea; en hardware real **no** hace falta y no debe existir):
+> ```bash
+> mkdir -p $HOME/.local/share/applications
+> sed 's|^Exec=imv|Exec=env LIBGL_ALWAYS_SOFTWARE=1 imv|' /usr/share/applications/imv.desktop > $HOME/.local/share/applications/imv.desktop
+> ```
+
+#### Lo que queda sin resolver
+
+- **Los iconos son los de Adwaita**, con las carpetas azules. Están previstos los iconos **Papirus**, con `papirus-folders` (AUR) para pintar las carpetas de marrón ([apartado 14](#s14)). Pasos preparados: `sudo pacman -S papirus-icon-theme`, `yay -S papirus-folders`, `sudo papirus-folders -C brown --theme Papirus-Dark` y `gsettings set org.gnome.desktop.interface icon-theme 'Papirus-Dark'` (más `gtk-icon-theme-name=Papirus-Dark` en `settings.ini`).
+- **La franja inferior de la papelera** («Restore Selected Items» / «Empty Trash») sigue **gris**: las reglas probadas (`infobar`, `actionbar`, `button`) no la alcanzaron. Para localizar el elemento real: `GTK_DEBUG=interactive thunar` abre el inspector de GTK.
+- Otros sitios que pueden quedar sin pintar: diálogos, preferencias y algunos menús.
+
 ---
 
 <a id="s10"></a>
@@ -1597,8 +1709,10 @@ Los programas se instalan automáticamente con las listas de paquetes ([apartado
 | Programa | Cómo abrirlo | Nota |
 |---|---|---|
 | Kitty | `Super + Enter` | |
+| Thunar | `Super + E` | Gestor de archivos, con el aspecto de la barra ([9.21](#921-thunar-y-el-aspecto-de-las-aplicaciones-gtk)) |
 | Brave | `Super + B` | No usa la bandeja: aparece en el dock como **ventana abierta** y se cierra con su **X**, con `Super + Retroceso` o con clic derecho en el dock. Lo que reproduce (YouTube, por ejemplo) aparece en el chip de música |
 | Discord | `Super + D` | Al cerrar la ventana queda en la bandeja del dock ([9.4](#94-dock-lateral-ventanas-y-bandeja)); **«Cerrar»** lo termina del todo. Necesita ≈ 940 px de ancho |
+| imv | Doble clic en una imagen (desde Thunar) | Visor de imágenes ([9.21](#921-thunar-y-el-aspecto-de-las-aplicaciones-gtk)) |
 
 > 💡 Desde una terminal, para abrir un programa sin dejarla ocupada: `discord & disown`.
 
@@ -1638,6 +1752,8 @@ Copia el código de 8 caracteres que muestra la terminal e introdúcelo en <http
 
 > ⚠️ Si la terminal se queda esperando tras autorizar, cierra la ventana del navegador que abrió `gh`.
 
+> 💡 En un equipo recién instalado **no hay navegador**: el código de 8 caracteres se introduce desde el **móvil o desde otro equipo**. Es imprescindible, porque el repositorio es **privado** y `git clone` lo exige.
+
 Comprueba la sesión:
 
 ```bash
@@ -1656,13 +1772,17 @@ cd PikSOn
 
 ### 11.5 Subir cambios
 
-Los ficheros de configuración que se editan en `~/.config` hay que **copiarlos al repositorio** antes de subirlos. Desde la carpeta del repositorio, con rutas relativas. **De Hyprland se copia solo `hyprland.lua`**, para que `monitors.lua` (propio de cada equipo) no entre al repositorio:
+Los ficheros de configuración que se editan en `~/.config` hay que **copiarlos al repositorio** antes de subirlos. Desde la carpeta del repositorio, con rutas relativas. **De Hyprland se copia solo `hyprland.lua`** (para que `monitors.lua`, propio de cada equipo, no entre) y **de GTK solo `gtk.css` y `settings.ini`** (la carpeta guarda marcadores personales):
 
 ```bash
 cd $HOME/PikSOn
 cp -r $HOME/.config/quickshell .config/
 cp -r $HOME/.config/kitty .config/
 cp $HOME/.config/hypr/hyprland.lua .config/hypr/hyprland.lua
+mkdir -p .config/gtk-3.0
+cp $HOME/.config/gtk-3.0/gtk.css $HOME/.config/gtk-3.0/settings.ini .config/gtk-3.0/
+pacman -Qqen > pkglist.txt
+pacman -Qqem > aur-pkglist.txt
 ```
 
 Para un **fichero suelto** (cada uno con su origen y su destino, y sin `-r`):
@@ -1687,11 +1807,13 @@ git push
 
 > 💡 Revisa siempre `git status` antes de hacer `git add .`: deben aparecer solo los ficheros que esperas, sin copias `.bak`, sin `monitors.lua` y sin nombres raros.
 
-> 💡 Los scripts nuevos deben conservar su permiso de ejecución: tras `git add .`, `git ls-files -s .config/quickshell/scripts` debe mostrar `100755` en todos (incluido `monitor-set.sh`).
+> 💡 Los scripts nuevos deben conservar su permiso de ejecución: tras `git add .`, `git ls-files -s .config/quickshell/scripts install.sh` debe mostrar `100755` en todos (incluidos `monitor-set.sh` e `install.sh`). Si falta, `chmod +x` y se vuelve a añadir.
 
 > ⚠️ **No copies nunca `~/.config` completo** al repositorio: contiene el token de GitHub (`gh`), datos del navegador y sesiones. Copia solo las carpetas que configures a propósito. Elimina antes las copias `.bak` (`rm -f ~/.config/quickshell/*.bak`).
 
 > ⚠️ Los datos personales (`agenda.json`, la futura `libros.json`...) **viven fuera del repositorio**, en `~/.local/share/pikson/`, y no se suben. Tampoco `~/.config/hypr/monitors.lua`.
+
+> 💡 **Las listas de paquetes deben regenerarse en cada commit importante** (las dos últimas líneas del bloque): `install.sh` instala *lo que digan* las listas. Con una lista antigua, el equipo nuevo se queda sin los programas recientes.
 
 ### 11.6 Cómo se sincronizan las copias
 
@@ -1715,7 +1837,7 @@ git push
 
 > 💡 Si se sube un fichero por error (por ejemplo, `pklist.txt` por teclear mal `pkglist.txt`), se retira con `git rm -f fichero` y un nuevo `commit` y `push`. Git conserva el historial, así que nada se pierde.
 
-> 💡 Ajustes del sistema, como la shell por defecto (`chsh`) o la zona horaria (`timedatectl`), **no** son ficheros del repositorio: git no los guarda. Se documentan en el README y se repiten en cada equipo.
+> 💡 Ajustes del sistema, como la shell por defecto (`chsh`), la zona horaria (`timedatectl`) o los de GSettings, **no** son ficheros del repositorio: git no los guarda. Se documentan en el README y los aplica `install.sh`.
 
 ---
 
@@ -1813,6 +1935,23 @@ Consulta y controla Hyprland en marcha:
 | `qs log` | Muestra el registro de la instancia en marcha (avisos y errores) |
 | `pkill qs` | Lo cierra |
 | `touch ~/.config/quickshell/Bar.qml` | Fuerza una recarga (útil tras añadir o renombrar ficheros) |
+
+### xdg-mime y gsettings
+
+| Comando | Efecto |
+|---|---|
+| `xdg-mime query default image/jpeg` | Qué programa abre ese tipo de archivo (`imv.desktop`) |
+| `xdg-mime default imv.desktop image/png` | Lo cambia |
+| `gsettings get org.gnome.desktop.interface font-name` | Lee un ajuste de GTK (GSettings) |
+| `gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'` | Lo cambia ([9.21](#921-thunar-y-el-aspecto-de-las-aplicaciones-gtk)) |
+
+### Revisar un script antes de ejecutarlo
+
+| Comando | Efecto |
+|---|---|
+| `bash -n install.sh` | Comprueba la **sintaxis** sin ejecutar nada (si no imprime nada, está bien) |
+| `bash install.sh --vm --dry-run` | **Ensayo en seco**: muestra cada orden con `[dry-run]` sin cambiar nada |
+| `head -3 install.sh` | Comprueba qué contiene realmente el fichero tras pegarlo |
 
 ### Probar iconos de Nerd Font
 
@@ -1914,7 +2053,7 @@ Pide la contraseña (no se ve al teclear). Para volver a bash: `chsh -s /bin/bas
 | `getent passwd $USER \| cut -d: -f7` | La shell **guardada** para la cuenta (cambia al ejecutar `chsh`) |
 | `echo $SHELL` | La shell de la **sesión en marcha** (cambia al iniciar sesión de nuevo) |
 
-> 💡 El cambio de shell es **un ajuste del sistema** (`/etc/passwd`), no un fichero del repositorio: git no lo guarda ni lo restaura. **En cada equipo nuevo hay que repetir `chsh`**.
+> 💡 El cambio de shell es **un ajuste del sistema** (`/etc/passwd`), no un fichero del repositorio: git no lo guarda ni lo restaura. **En cada equipo nuevo hay que repetir `chsh`** (`install.sh` lo hace).
 
 > 💡 Hyprland, Quickshell y los scripts (`net.sh`, `netinfo.sh`, `trayquit.sh`, `monitor-set.sh`) usan `/bin/sh`, **no** la shell del usuario: cambiar a zsh no les afecta.
 
@@ -1932,9 +2071,74 @@ Pide la contraseña (no se ve al teclear). Para volver a bash: `chsh -s /bin/bas
 ---
 
 <a id="s13"></a>
-## 13. 📥 Restaurar el entorno en otro equipo
+## 13. 📥 Restaurar el entorno en otro equipo (`install.sh`)
 
-Tras clonar el repositorio ([11.4](#114-clonar-el-repositorio)), instala todos los programas guardados:
+La forma de montar todo este entorno en un equipo nuevo es el script **`install.sh`**, en la raíz del repositorio. Parte de un **Arch recién instalado** y lo deja idéntico a este.
+
+### 13.1 El flujo, paso a paso
+
+1. **Arrancar con el USB de Arch** (la ISO oficial, grabada con Rufus en modo *«Imagen DD»* o con Ventoy). El equipo necesita **internet**.
+2. **Ejecutar `archinstall`** y elegir lo básico:
+   - Disco y particiones (en un arranque dual con Windows, aquí está todo el cuidado: [14](#s14)).
+   - Cargador de arranque (GRUB, si se quiere elegir entre Windows y Arch al encender).
+   - Un **usuario con `sudo`** y su contraseña.
+   - Teclado **en inglés (US)**, idioma y zona horaria.
+   - Perfil **mínimo**, sin escritorio.
+   - Red con **NetworkManager**.
+   - Paquetes extra: **`git`, `nano`, `base-devel` y `github-cli`**.
+3. **Reiniciar** y entrar en el sistema instalado (ya sin el USB).
+4. **Iniciar sesión en GitHub**, porque el repositorio es privado ([11.3](#113-iniciar-sesión-en-github)):
+   ```bash
+   gh auth login
+   ```
+5. **Clonar y ejecutar**, siempre como **usuario normal** (nunca como root):
+   ```bash
+   git clone https://github.com/Joan005/PikSOn
+   cd PikSOn
+   bash install.sh
+   ```
+6. **Reiniciar** de nuevo. Al entrar por el TTY, el `.zprofile` lanza Hyprland solo.
+
+### 13.2 Uso del script
+
+```bash
+bash install.sh               # pregunta si es una máquina virtual o un equipo real
+bash install.sh --vm          # sin preguntar: VirtualBox
+bash install.sh --real        # sin preguntar: equipo físico
+bash install.sh --dry-run     # ensayo: muestra lo que haría, sin cambiar nada
+```
+
+Antes de lanzarlo por primera vez conviene revisarlo con `bash -n install.sh` (sintaxis) y `bash install.sh --vm --dry-run` (plan). El registro completo queda en **`~/pikson-install.log`**, y al final muestra una lista de **avisos** con lo que no pudo hacer.
+
+### 13.3 Qué hace, en ocho pasos
+
+| Paso | Qué hace |
+|---|---|
+| 1 | Actualiza el sistema (`pacman -Syu`) e instala `base-devel` y `git` |
+| 2 | Instala `yay` (AUR) si no lo tiene |
+| 3 | Instala los paquetes de `pkglist.txt` (pacman) y `aur-pkglist.txt` (yay); si la instalación en bloque falla, **prueba paquete a paquete** y avisa de los que no pudo instalar |
+| 4 | Copia la configuración (`hypr`, `kitty`, `quickshell`, `gtk-3.0`, `.zshrc` y `.zprofile`), **guardando antes una copia** de lo existente en `~/.config-backup-FECHA`, y da `chmod +x` a los scripts |
+| 5 | Servicios: activa NetworkManager, desactiva `systemd-networkd` y activa PipeWire (surten efecto al reiniciar) |
+| 6 | Zona horaria `Europe/Madrid`, sincronización de hora (solo en equipo real) y `chsh` a zsh |
+| 7 | **VM o real**: en un equipo real quita `LIBGL_ALWAYS_SOFTWARE=1` de `hyprland.lua` y borra el lanzador de `imv`; en una VM instala `virtualbox-guest-utils`, activa `vboxservice` y crea el lanzador de `imv` |
+| 8 | Ajustes de GTK con `gsettings` (tipografía, tema oscuro y cursor) |
+
+### 13.4 Qué NO hace, a propósito, y queda a mano
+
+| Qué | Por qué |
+|---|---|
+| **Reiniciar** | Necesario para NetworkManager, zsh y los servicios |
+| **`gh auth login`**, y las sesiones de **Brave y Discord** | Son credenciales: nunca viajan en el repositorio |
+| **Controladores de la GPU** (NVIDIA, AMD o Intel) | Dependen del equipo; NVIDIA con Hyprland exige configuración extra |
+| **Monitores** | Se ajustan con la tuerca de la barra y *Conservar y guardar* ([9.20](#920-ajustes-la-tuerca-y-el-panel-de-pantallas)); `monitors.lua` es propio de cada equipo. Antes, comprobar que la escala `1.25` es **válida** para su resolución ([8](#otros-ajustes-de-hyprlandlua-monitor-escala-y-frecuencia)) |
+| **Datos personales** (`agenda.json`...) | Viven fuera del repositorio ([9.12](#912-calendario-y-agenda)); si se quieren, se copian a mano |
+| `multilib` (Steam), `hyprlock`, iconos de Thunar | Previstos para la siguiente versión del script ([14](#s14)) |
+
+> ⚠️ **El script es tan bueno como las listas de paquetes.** Instala *lo que digan* `pkglist.txt` y `aur-pkglist.txt`; hay que regenerarlas cuando se instale algo nuevo ([11.5](#115-subir-cambios)). Es la versión 1 y **debe probarse en una VM limpia** antes de usarla en un disco real: haz una instantánea justo después de instalar Arch con `archinstall`, para repetir la prueba rápido si algo falla.
+
+### 13.5 Procedimiento manual equivalente
+
+Todo lo que hace el script se puede hacer a mano. Tras clonar el repositorio ([11.4](#114-clonar-el-repositorio)), instala los programas guardados:
 
 ```bash
 sudo pacman -S --needed - < pkglist.txt
@@ -1947,6 +2151,7 @@ Después, aplica las configuraciones:
 cp -r .config/hypr $HOME/.config/
 cp -r .config/quickshell $HOME/.config/
 cp -r .config/kitty $HOME/.config/
+cp -r .config/gtk-3.0 $HOME/.config/
 chmod +x $HOME/.config/quickshell/scripts/*.sh
 cp zsh/.zshrc $HOME/.zshrc
 cp zsh/.zprofile $HOME/.zprofile      # opcional: arranque automático de Hyprland
@@ -1954,23 +2159,24 @@ cp zsh/.zprofile $HOME/.zprofile      # opcional: arranque automático de Hyprla
 
 El fondo de pantalla viaja dentro de `.config/quickshell/` (`Wallpaper.qml` y `wallpaper.jpg`), y el tema en `Theme.qml`.
 
-Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1](#11-red-networkmanager)). Activa también el audio ([apartado 1.2](#12-audio-pipewire)): los paquetes de PipeWire llegan con `pkglist.txt`, pero sus servicios de usuario se activan con `systemctl --user enable --now pipewire pipewire-pulse wireplumber`. Ajusta la **zona horaria** ([1.3](#13-zona-horaria-y-hora)), que tampoco viaja con el repositorio.
+Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1](#11-red-networkmanager)). Activa también el audio ([apartado 1.2](#12-audio-pipewire)): los paquetes de PipeWire llegan con `pkglist.txt`, pero sus servicios de usuario se activan con `systemctl --user enable --now pipewire pipewire-pulse wireplumber`. Ajusta la **zona horaria** ([1.3](#13-zona-horaria-y-hora)), que tampoco viaja con el repositorio, y los **ajustes de GTK** con `gsettings` ([9.21](#921-thunar-y-el-aspecto-de-las-aplicaciones-gtk)).
 
 **Cambia la shell a zsh** (`chsh -s /usr/bin/zsh`; este ajuste **no viaja con el repositorio**) y **cierra la sesión del TTY** (`exit`) para iniciarla de nuevo: salir de Hyprland no basta ([apartado 12](#s12)). Con el `.zprofile` copiado, Hyprland arranca solo tras el login ([apartado 4.1](#41-arranque-automático-de-hyprland)); si no, entra con `start-hyprland`. La barra y los paneles arrancan solos; el **dock** está oculto y aparece al llevar el ratón al borde derecho (y solo existe cuando hay alguna ventana o app en segundo plano); el chip de música está siempre en la barra («Nada suena» si no hay reproductor).
 
-**Pantallas en un equipo nuevo:** `monitors.lua` **no** viaja con el repositorio. Mientras no exista, Hyprland usa la regla de respaldo de `hyprland.lua` (escala 1,25, modo preferido). Ajusta resolución, frecuencia y escala con el panel de la tuerca ([9.20](#920-ajustes-la-tuerca-y-el-panel-de-pantallas)) y pulsa **Conservar y guardar**: se creará el `monitors.lua` de ese equipo. En hardware real, revisa antes que la escala `1.25` sea **válida** para su resolución ([apartado 8](#otros-ajustes-de-hyprlandlua-monitor-escala-y-frecuencia)).
+**Pantallas en un equipo nuevo:** `monitors.lua` **no** viaja con el repositorio. Mientras no exista, Hyprland usa la regla de respaldo de `hyprland.lua` (escala 1,25, modo preferido). Ajusta resolución, frecuencia y escala con el panel de la tuerca ([9.20](#920-ajustes-la-tuerca-y-el-panel-de-pantallas)) y pulsa **Conservar y guardar**: se creará el `monitors.lua` de ese equipo.
 
 **Datos personales:** la agenda (`~/.local/share/pikson/agenda.json`) **no** viaja con el repositorio. En un equipo nuevo empezará vacía; si se quiere conservar, se copia a mano.
 
 | Fichero | Contenido |
 |---|---|
+| `install.sh` | El instalador |
 | `pkglist.txt` | Paquetes de los repositorios oficiales |
 | `aur-pkglist.txt` | Paquetes del AUR |
-| `.config/` | Configuración de Hyprland, Quickshell (con su tema, sus paneles, los ajustes y el dock) y kitty |
+| `.config/` | Configuración de Hyprland, Quickshell (con su tema, sus paneles, los ajustes y el dock), kitty y GTK |
 | `zsh/.zshrc` | Configuración de zsh (se copia a `~/.zshrc`) |
 | `zsh/.zprofile` | Arranque automático de Hyprland en el TTY1 (se copia a `~/.zprofile`) |
 
-> ⚠️ Requiere `yay` instalado ([apartado 7](#s7)). Las listas incluyen `virtualbox-guest-utils`, que solo hace falta en una VM: retíralo en hardware real. En hardware real, quita también `LIBGL_ALWAYS_SOFTWARE=1` de `hyprland.lua` (terminal y Quickshell), y revisa la **escala** y la **frecuencia** del monitor ([apartado 8](#otros-ajustes-de-hyprlandlua-monitor-escala-y-frecuencia)): la escala `1.25` y el tamaño de letra de kitty en `10` están ajustados a la VM.
+> ⚠️ Requiere `yay` instalado ([apartado 7](#s7)). Las listas incluyen `virtualbox-guest-utils`, que solo hace falta en una VM: retíralo en hardware real (el script lo hace). En hardware real, quita también `LIBGL_ALWAYS_SOFTWARE=1` de `hyprland.lua` (terminal y Quickshell), y revisa la **escala** y la **frecuencia** del monitor ([apartado 8](#otros-ajustes-de-hyprlandlua-monitor-escala-y-frecuencia)): la escala `1.25` y el tamaño de letra de kitty en `10` están ajustados a la VM.
 
 > 💡 Cada vez que instales algo nuevo, regenera las listas. Cuidado con el nombre: es `pkglist.txt` (con **g**); un `pklist.txt` crearía un fichero nuevo y distinto. Tras regenerarlas, `ttf-cormorant` ya no debería hacer falta (el tema usa solo JetBrains Mono).
 > ```bash
@@ -1985,14 +2191,22 @@ Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1
 
 **Hecho hasta ahora**
 
-Barra «solo texto» con workspaces en números romanos; chip de música siempre visible; paneles de música (con letra sincronizada y columna lateral), calendario con agenda, sonido, avisos, tiempo, red (medallón) y menú de apagado; cierre al pulsar fuera; tipografía única; dock lateral oculto con ventanas abiertas y bandeja; **tuerca de ajustes con el panel de Pantallas** (esquema a escala, resolución, frecuencia, escala, rotación, arrastre con imán, cuenta atrás de 15 s y guardado permanente en `monitors.lua`).
+Barra «solo texto» con workspaces en números romanos; chip de música siempre visible; paneles de música (con letra sincronizada y columna lateral), calendario con agenda, sonido, avisos, tiempo, red (medallón) y menú de apagado; cierre al pulsar fuera; tipografía única; dock lateral oculto con ventanas abiertas y bandeja; **tuerca de ajustes con el panel de Pantallas** (esquema a escala, resolución, frecuencia, escala, rotación, arrastre con imán, cuenta atrás de 15 s y guardado permanente en `monitors.lua`); **Thunar** con aspecto de la barra y visor de imágenes `imv`; **`install.sh` v1** (probado en seco).
+
+**Lo más inmediato: pasar a un equipo real**
+
+- [ ] **Probar `install.sh` en una VM limpia** (con instantánea tras `archinstall`) y corregir lo que falle
+- [ ] **`install.sh` v2**: controladores de la GPU, `multilib` (Steam), iconos de Thunar, `hyprlock` y `hypridle`
+- [ ] Piezas del escritorio que aún no están y conviene añadir **antes de pasar a un equipo real**: capturas de pantalla (`grim` y `slurp`), portapapeles (`wl-clipboard`), agente de autenticación (polkit, por ejemplo `hyprpolkitagent`), fuente de emojis (`noto-fonts-emoji`) y decidir cómo se entra (TTY con `.zprofile` o un gestor gráfico)
+- [ ] **Preparar Windows para el arranque dual**: copia de seguridad, **clave de recuperación de BitLocker**, desactivar el «Inicio rápido», reducir la partición **desde Windows**, ajustar la hora (`timedatectl set-local-rtc 1`), GRUB con `os-prober` y, si se puede, **instalar en otro disco físico** para no tocar el arranque de Windows
+- [ ] En el equipo real: GPU (NVIDIA, AMD o Intel), sus **dos monitores** (3440×1440 a 165 Hz y uno vertical), Wi-Fi y Bluetooth, audio completo y Steam
 
 **Siguiente, por construir (en este orden)**
 
 - [ ] **Red + camino de la conexión**: conservar el medallón y añadir un esquema *Equipo → Router → Internet* con las IP, la velocidad y la latencia (con `ping`)
 - [ ] **Pantallas, siguientes fases**: 1) filtrar las **escalas válidas** para cada resolución (las que dan un tamaño lógico entero) en lugar de la lista fija; 2) **encender y apagar** monitores (los apagados no salen en `hyprctl monitors -j`; habrá que leer también `hyprctl monitors all -j`); 3) espejo y monitor principal; 4) probar el **arrastre y la rotación con dos monitores** (hoy solo probados con uno)
 - [ ] **Más secciones en la tuerca**: apariencia (fondo y tema), teclado, energía; y un resumen del sistema
-- [ ] **Batería** (en hardware real)
+- [ ] **Batería** (en hardware real, si es un portátil)
 - [ ] **Sistema**: CPU, RAM, disco y temperatura; al pulsarlo abre Pantallas
 - [ ] **Lanzador** (diseño «B»): calculadora, categorías y atajo de teclado
 - [ ] **Sonido**: medidor del micrófono en el panel
@@ -2002,6 +2216,13 @@ Barra «solo texto» con workspaces en números romanos; chip de música siempre
 - [ ] **Red y Bluetooth, fases 2 y 3 (hardware real)**: conectar las pestañas Wi-Fi y Bluetooth a `nmcli` y `bluetoothctl` en lugar de los datos de ejemplo; «Escanear redes» y «Escanear dispositivos»; la ficha de contraseña para las redes con candado; y que el botón de latón encienda y apague de verdad
 - [ ] **Reproductor**: probar el bucle con Spotify real (en Brave se ve atenuado) y la **cola** con la API web de Spotify (MPRIS no la expone)
 - [ ] **Animaciones**: 1) una transición común de apertura de los paneles (escala del 92 % al 100 % con aparición suave, aplicada al **contenido**); 2) movimiento discreto en el medallón de red; 3) cierres animados. Las animaciones en bucle solo deben ejecutarse **mientras el panel está abierto**: en la VM, con renderizado por software, pueden ir entrecortadas
+
+**Thunar**
+
+- [ ] **Iconos Papirus** con `papirus-folders` (carpetas marrones): pasos en [9.21](#921-thunar-y-el-aspecto-de-las-aplicaciones-gtk), aparcados por ahora
+- [ ] La **franja gris de la papelera**: localizar el nodo con `GTK_DEBUG=interactive thunar`
+- [ ] Comprobar que el diálogo **«Guardar como» de Brave** se ve bien tras instalar los portales y volver a entrar
+- [ ] Opcional: regla de ventana para que `imv` se abra flotando; `mpv` (vídeo) y `zathura` (PDF) con `xdg-mime`
 
 **Dock**
 
@@ -2022,14 +2243,13 @@ Barra «solo texto» con workspaces en números romanos; chip de música siempre
 
 - [ ] Fondo de pantalla de tonos cálidos, o tintar el actual hacia sepia
 - [ ] Comprobar en `hyprland.lua` las esquinas redondeadas de las ventanas (`rounding`, unos 14 para casar con `Theme.radius`) y la sombra
-- [ ] Una única fuente de colores para Quickshell, kitty y Hyprland (hoy están copiados en tres sitios)
+- [ ] Una única fuente de colores para Quickshell, kitty, Hyprland y GTK (hoy están copiados en cuatro sitios)
 - [ ] Desenfoque de las ventanas (es pesado en la VM)
 
 **Escritorio**
 
 - [ ] Máscara de entrada en la barra superior (que los huecos no bloqueen clics ni reserven espacio)
 - [ ] Distribución de las ventanas: Discord necesita ≈ 940 px de ancho
-- [ ] Gestor de archivos y diálogos de archivos de GTK (se ven mal en la VM)
 - [ ] Fusionar `net.sh` y `netinfo.sh` en un único script
 - [ ] Quitar el registro de depuración de la línea de arranque de Quickshell
 
@@ -2039,16 +2259,15 @@ Barra «solo texto» con workspaces en números romanos; chip de música siempre
 - [ ] Frecuencia del monitor (165 Hz) y revisión de la escala, ahora desde el panel de Pantallas
 - [ ] Probar el Wi-Fi y el Bluetooth (`bluez`, `bluez-utils`) con el panel medallón, y revisar el volumen y el silencio con el rango completo
 - [ ] GNU Stow para enlazar configuraciones (incluidos `zsh/.zshrc` y `zsh/.zprofile`)
-- [ ] Script `install.sh` que automatice este manual, preguntando si es una **VM o un equipo real** para aplicar o quitar lo que depende de ello: `virtualbox-guest-utils`, `LIBGL_ALWAYS_SOFTWARE=1`, la escala y la frecuencia del monitor
 - [ ] Probar el manual completo en una VM limpia
 - [ ] Login gráfico (SDDM, greetd con un greeter o uno propio con Quickshell), quitando el bloque de `~/.zprofile`
 
-**A largo plazo: un USB instalador con mi Arch**
+**A largo plazo: una ISO propia con mi Arch**
 
-La idea es un USB booteable, como el de Windows 10 o el de Arch, pero que **instale mi entorno completo** (Hyprland, Quickshell, dotfiles y paquetes) en el disco de cualquier equipo. **No** consiste en clonar la VM, que no es portable (arrastra los controladores de VirtualBox y los identificadores de disco). No se empieza hasta tener el escritorio terminado.
+El flujo de hoy es **sencillo**: ISO oficial de Arch con Rufus, `archinstall`, clonar el repositorio y `bash install.sh` ([apartado 13](#s13)). La idea de **una ISO propia**, que ya lleve dentro el instalador y los dotfiles, se construiría con **archiso** en una VM de Arch y se grabaría después con Rufus en modo DD. **No** consiste en clonar la VM, que no es portable (arrastra los controladores de VirtualBox y los identificadores de disco). No se empieza hasta tener el escritorio terminado y `install.sh` probado.
 
-- [ ] 1. Terminar el escritorio, subirlo a GitHub y regenerar las listas de paquetes
-- [ ] 2. Escribir `install.sh` (ver arriba) y reutilizarlo como base de todo lo demás
-- [ ] 3. Un instalador con mi configuración: un script con `archinstall` (disco, usuario, contraseña, idioma, zona horaria y teclado US) más `install.sh`, o bien **Calamares** (asistente gráfico tipo Windows, más trabajo). Las contraseñas y el usuario se piden al instalar y **nunca** viajan en la imagen
-- [ ] 4. Construir la ISO con **archiso** (perfil `releng` más la lista de paquetes y el instalador). Decidir entre instalación **online** (ISO pequeña que descarga al instalar; los paquetes del AUR se compilan o se sirven desde un repositorio propio) y **offline** (ISO grande con todo, con el AUR compilado antes en un repositorio local). Con un **tema de GRUB propio**
-- [ ] 5. Grabarla con `dd` en un USB y probarla primero en una VM limpia y luego en hardware real (Wi-Fi, Bluetooth, tarjeta gráfica, UEFI). El *Secure Boot* no funciona con estas ISO
+- [ ] 1. Terminar el escritorio, probar `install.sh` en una VM limpia y mantener las listas de paquetes al día
+- [ ] 2. Perfil de **archiso** (copia del perfil `releng`) con los paquetes necesarios, los dotfiles y el `install.sh` dentro de `airootfs/`, y un `instalar.sh` que arranque solo y lance `archinstall`
+- [ ] 3. Compilar los paquetes del **AUR** con `makepkg` y guardarlos en un repositorio local dentro de la ISO (`repo-add`); decidir entre instalación **online** (ISO pequeña; los paquetes oficiales se descargan al instalar) y **offline** (ISO grande con todo)
+- [ ] 4. Construir la ISO con `mkarchiso`, probarla en una VM limpia (con y sin UEFI) y, solo entonces, grabarla con Rufus (modo DD) y probar en hardware real. Opcional: un **tema de GRUB propio**
+- [ ] Cuidados: **nada secreto dentro** (ni el token de `gh`, ni `agenda.json`, ni `monitors.lua`), la ISO **caduca** (Arch es rolling) y el *Secure Boot* no funciona con estas ISO
