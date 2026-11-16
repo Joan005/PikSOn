@@ -1,0 +1,178 @@
+/* Thunar como extensión de la barra superior: Pergamino nocturno, solo texto */
+@define-color theme_bg_color #34261b;
+@define-color theme_base_color #2d1e12;
+@define-color theme_fg_color #f6ebcf;
+@define-color theme_text_color #f6ebcf;
+@define-color theme_selected_bg_color #e2b564;
+@define-color theme_selected_fg_color #2d1e12;
+@define-color insensitive_fg_color #8c6d4f;
+@define-color borders #8c6d4f;
+@define-color unfocused_borders #6b4f39;
+@define-color theme_tooltip_bg_color #4a382a;
+@define-color theme_tooltip_fg_color #f6ebcf;
+
+/* ventana: marrón oscuro semitransparente */
+window, .background {
+    background-color: rgba(45, 30, 18, 0.90);
+    color: #f6ebcf;
+}
+
+/* barra de menús: texto con el degradado de la barra */
+menubar, .menubar {
+    background-color: transparent;
+    background-image: linear-gradient(to bottom, rgba(26, 17, 11, 0.90), rgba(26, 17, 11, 0));
+    border: none;
+    box-shadow: none;
+    padding: 2px 8px;
+}
+
+menubar > menuitem {
+    background: transparent;
+    color: #d0b992;
+    padding: 4px 10px;
+    border-radius: 0;
+}
+
+menubar > menuitem:hover {
+    background: transparent;
+    color: #e2b564;
+}
+
+/* barra de herramientas: sin cajas, con filete de latón debajo */
+toolbar, .toolbar {
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    border-bottom: 1px solid rgba(140, 109, 79, 0.45);
+    box-shadow: none;
+    padding: 4px 8px;
+}
+
+toolbar button, .toolbar button, .linked button {
+    background: transparent;
+    background-image: none;
+    border: none;
+    box-shadow: none;
+    color: #f6ebcf;
+    padding: 4px 8px;
+}
+
+toolbar button:hover, .toolbar button:hover, .linked button:hover {
+    background: transparent;
+    color: #e2b564;
+}
+
+/* barra de dirección: solo una línea fina */
+entry {
+    background-color: transparent;
+    background-image: none;
+    border: none;
+    border-bottom: 1px solid rgba(140, 109, 79, 0.6);
+    border-radius: 0;
+    box-shadow: none;
+    color: #f6ebcf;
+}
+
+entry:focus {
+    border-bottom-color: #e2b564;
+}
+
+/* panel lateral: texto atenuado; el elegido, dorado con una raya */
+placessidebar, .sidebar {
+    background-color: transparent;
+    border-right: 1px solid rgba(140, 109, 79, 0.45);
+}
+
+placessidebar row {
+    background: transparent;
+    color: #d0b992;
+    padding: 4px 8px;
+    border-left: 2px solid transparent;
+    border-radius: 0;
+}
+
+placessidebar row:hover {
+    background: transparent;
+    color: #e2b564;
+}
+
+placessidebar row:selected {
+    background: transparent;
+    color: #e2b564;
+    border-left: 2px solid #e2b564;
+}
+
+placessidebar row image {
+    -gtk-icon-style: symbolic;
+}
+
+/* lista de archivos: fondo transparente y selección como la del calendario */
+.view, iconview, treeview.view {
+    background-color: transparent;
+    color: #f6ebcf;
+}
+
+.view:selected, iconview:selected, treeview.view:selected {
+    background-color: rgba(226, 181, 100, 0.22);
+    color: #f6ebcf;
+}
+
+treeview header button {
+    background: transparent;
+    background-image: none;
+    border: none;
+    border-bottom: 1px solid rgba(140, 109, 79, 0.45);
+    box-shadow: none;
+    color: #d0b992;
+}
+
+/* barras de desplazamiento finas */
+scrollbar {
+    background: transparent;
+    border: none;
+}
+
+scrollbar slider {
+    background-color: rgba(140, 109, 79, 0.6);
+    border-radius: 3px;
+    min-width: 6px;
+    min-height: 6px;
+}
+
+/* menús contextuales */
+menu, .menu, popover, popover.background {
+    background-color: #4a382a;
+    color: #f6ebcf;
+    border: 1px solid #8c6d4f;
+    border-radius: 8px;
+}
+
+menuitem:hover {
+    background-color: rgba(226, 181, 100, 0.22);
+    color: #e2b564;
+}
+
+/* barra de estado */
+statusbar, .statusbar {
+    background: transparent;
+    border-top: 1px solid rgba(140, 109, 79, 0.45);
+    color: #d0b992;
+    padding: 2px 8px;
+}
+
+separator {
+    background-color: rgba(140, 109, 79, 0.45);
+}
+/* tipografía de la barra en todo Thunar */
+label, entry, button, menuitem, treeview, iconview, tooltip, statusbar {
+    font-family: "JetBrainsMono Nerd Font";
+    font-size: 12px;
+}
+/* tipografía de la barra en absolutamente todo el texto */
+* {
+    font-family: "JetBrainsMono Nerd Font";
+}
+
+.view {
+    font-size: 12px;
+}

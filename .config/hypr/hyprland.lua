@@ -40,7 +40,7 @@ end
 
 -- Set programs that you use
 local terminal    = "env LIBGL_ALWAYS_SOFTWARE=1 kitty"
-local fileManager = "dolphin"
+local fileManager = "thunar"
 local menu        = "hyprlauncher"
 
 
