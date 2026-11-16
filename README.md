@@ -171,7 +171,6 @@ Arranca con la ISO oficial de Arch (grabada con Rufus en modo *Imagen DD*, o con
 Reinicia, entra con tu usuario y, si el repositorio es privado, inicia sesión en GitHub (el código de 8 caracteres se introduce desde otro dispositivo):
 
 ```bash
-gh auth login
 git clone https://github.com/Joan005/PikSOn
 cd PikSOn
 bash install.sh --vm        # o --real en un equipo físico
