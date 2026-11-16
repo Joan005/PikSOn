@@ -68,18 +68,82 @@ PikSOn/
 ---
 
 ## 📑 Índice
-1. [Qué es](#que-es)
-2. [Qué incluye](#que-incluye)
-3. [Instalación](#instalacion)
+1. [Instalación](#instalacion)
+2. [Qué es](#que-es)
+3. [Qué incluye](#que-incluye)
 4. [Atajos de teclado](#atajos)
-5. [Decisiones de diseño](#decisiones)
-6. [Problemas conocidos](#problemas)
-7. [Pendiente](#pendiente)
+5. [Pendiente](#pendiente)
+
+---
+
+<a id="instalacion"></a>
+## 1. Instalación
+
+El camino es: **instalar Arch con `archinstall`, clonar este repositorio y lanzar `install.sh`**.
+
+### Paso 0. Si es una máquina virtual (VirtualBox)
+
+Con la máquina **apagada**, en *Configuración → Pantalla*:
+
+| Opción | Valor |
+|---|---|
+| Controlador gráfico | **VMSVGA** |
+| Aceleración 3D | **Habilitada** |
+| Memoria de vídeo | **128 MB** |
+
+> ⚠️ Sin esto, **Hyprland aborta al arrancar** y vuelve al `login:`. El script no puede cambiarlo desde dentro.
+
+### Paso 1. Instalar Arch
+
+Arranca con la ISO oficial de Arch (grabada con Rufus en modo *Imagen DD*, o con Ventoy) y ejecuta `archinstall`, eligiendo:
+
+| Apartado | Elección |
+|---|---|
+| Disco y cargador de arranque | A tu medida (GRUB si hay arranque dual) |
+| Usuario | Con permisos de **superusuario** (`sudo`) |
+| Teclado | **Inglés (US)** |
+| Perfil | **Mínimo**, sin escritorio |
+| Red | **NetworkManager** |
+| **Paquetes adicionales** | **`git nano base-devel github-cli`** |
+
+> ⚠️ Los paquetes adicionales se olvidan con facilidad. Sin `git`, no se puede clonar el repositorio.
+
+### Paso 2. Clonar y ejecutar
+
+Reinicia, entra con tu usuario y, si el repositorio es privado, inicia sesión en GitHub (el código de 8 caracteres se introduce desde otro dispositivo):
+
+```bash
+gh auth login
+git clone https://github.com/Joan005/PikSOn
+cd PikSOn
+bash install.sh --vm        # o --real en un equipo físico
+```
+
+Sin opción, el script pregunta si es una máquina virtual. Con `--dry-run` solo muestra lo que haría, sin cambiar nada. **No lo ejecutes como root.**
+
+### Paso 3. Qué hace el script
+
+1. Actualiza el sistema e instala `base-devel`, `git` y `yay`.
+2. Instala los paquetes de `pkglist.txt` y `aur-pkglist.txt`.
+3. Copia la configuración (guardando antes una copia de lo existente en `~/.config-backup-FECHA`).
+4. Activa NetworkManager y PipeWire, y fija la zona horaria y zsh como shell.
+5. Aplica lo propio de **VM o equipo real** (la variable de renderizado por software, `virtualbox-guest-utils`...).
+6. Ajusta GTK (tipografía, tema oscuro y cursor) con `gsettings`.
+
+Todo queda registrado en `~/pikson-install.log`, con una lista de avisos al final.
+
+### Paso 4. Lo que queda a mano
+
+Reiniciar; los **controladores de la GPU** si es un equipo real; ajustar los **monitores** desde la tuerca; y volver a iniciar sesión en Brave y Discord. Los datos personales (agenda, sesiones) no viajan con el repositorio.
+
+### Cómo arranca el escritorio
+
+Se entra por el **TTY1** con usuario y contraseña; el `~/.zprofile` lanza `start-hyprland` automáticamente. Si Hyprland falla, vuelve al `login:`: pasa al **TTY2** (`Ctrl derecho + F2` en VirtualBox), donde no se lanza, para ver el error con `start-hyprland`.
 
 ---
 
 <a id="que-es"></a>
-## 1. Qué es
+## 2. Qué es
 
 | Pieza | Qué hace |
 |---|---|
@@ -97,7 +161,7 @@ PikSOn/
 ---
 
 <a id="que-incluye"></a>
-## 2. Qué incluye
+## 3. Qué incluye
 
 ### La barra «solo texto»
 
@@ -134,71 +198,6 @@ El gestor de archivos (`Super + E`), con el mismo lenguaje visual que la barra: 
 
 ---
 
-<a id="instalacion"></a>
-## 3. Instalación
-
-El camino es: **instalar Arch con `archinstall`, clonar este repositorio y lanzar `install.sh`**.
-
-### 0. Si es una máquina virtual (VirtualBox)
-
-Con la máquina **apagada**, en *Configuración → Pantalla*:
-
-| Opción | Valor |
-|---|---|
-| Controlador gráfico | **VMSVGA** |
-| Aceleración 3D | **Habilitada** |
-| Memoria de vídeo | **128 MB** |
-
-> ⚠️ Sin esto, **Hyprland aborta al arrancar** y vuelve al `login:`. El script no puede cambiarlo desde dentro.
-
-### 1. Instalar Arch
-
-Arranca con la ISO oficial de Arch (grabada con Rufus en modo *Imagen DD*, o con Ventoy) y ejecuta `archinstall`, eligiendo:
-
-| Apartado | Elección |
-|---|---|
-| Disco y cargador de arranque | A tu medida (GRUB si hay arranque dual) |
-| Usuario | Con permisos de **superusuario** (`sudo`) |
-| Teclado | **Inglés (US)** |
-| Perfil | **Mínimo**, sin escritorio |
-| Red | **NetworkManager** |
-| **Paquetes adicionales** | **`git nano base-devel github-cli`** |
-
-> ⚠️ Los paquetes adicionales se olvidan con facilidad. Sin `git`, no se puede clonar el repositorio.
-
-### 2. Clonar y ejecutar
-
-Reinicia, entra con tu usuario y, si el repositorio es privado, inicia sesión en GitHub (el código de 8 caracteres se introduce desde otro dispositivo):
-
-```bash
-git clone https://github.com/Joan005/PikSOn
-cd PikSOn
-bash install.sh --vm        # o --real en un equipo físico
-```
-
-Sin opción, el script pregunta si es una máquina virtual. Con `--dry-run` solo muestra lo que haría, sin cambiar nada. **No lo ejecutes como root.**
-
-### 3. Qué hace el script
-
-1. Actualiza el sistema e instala `base-devel`, `git` y `yay`.
-2. Instala los paquetes de `pkglist.txt` y `aur-pkglist.txt`.
-3. Copia la configuración (guardando antes una copia de lo existente en `~/.config-backup-FECHA`).
-4. Activa NetworkManager y PipeWire, y fija la zona horaria y zsh como shell.
-5. Aplica lo propio de **VM o equipo real** (la variable de renderizado por software, `virtualbox-guest-utils`...).
-6. Ajusta GTK (tipografía, tema oscuro y cursor) con `gsettings`.
-
-Todo queda registrado en `~/pikson-install.log`, con una lista de avisos al final.
-
-### 4. Lo que queda a mano
-
-Reiniciar; los **controladores de la GPU** si es un equipo real; ajustar los **monitores** desde la tuerca; y volver a iniciar sesión en Brave y Discord. Los datos personales (agenda, sesiones) no viajan con el repositorio.
-
-### Cómo arranca el escritorio
-
-Se entra por el **TTY1** con usuario y contraseña; el `~/.zprofile` lanza `start-hyprland` automáticamente. Si Hyprland falla, vuelve al `login:`: pasa al **TTY2** (`Ctrl derecho + F2` en VirtualBox), donde no se lanza, para ver el error con `start-hyprland`.
-
----
-
 <a id="atajos"></a>
 ## 4. Atajos de teclado
 
@@ -217,38 +216,8 @@ Se entra por el **TTY1** con usuario y contraseña; el `~/.zprofile` lanza `star
 
 ---
 
-<a id="decisiones"></a>
-## 5. Decisiones de diseño
-
-- **Una sola tipografía** (JetBrains Mono Nerd Font) en todas partes. Se probó una serif y se descartó.
-- **Barra «solo texto».** Se probaron lomos de libros y placas de latón; resultaban recargados.
-- **Los paneles son sobrios** (fondo liso, filete fino, esquinas redondeadas), sin cuero ni latón.
-- **El dock se oculta.** Antes era una cajita fija; ahora solo aparece al tocar el borde derecho.
-- **Cerrar al pulsar fuera** se hace con una ventana transparente bajo la barra, porque `HyprlandFocusGrab` no funciona en este Hyprland.
-- **Los monitores:** `hyprland.lua` carga `monitors.lua` con un respaldo (`pcall(dofile, ...)`), así que nunca se queda sin pantalla. Hyprland **solo acepta escalas con las que el tamaño lógico sea un entero** (1,5 no vale en una pantalla de 955 px de alto).
-- **GTK:** su configuración por GSettings **manda sobre `settings.ini`**, por eso `install.sh` fija también `gsettings`.
-- **`LIBGL_ALWAYS_SOFTWARE=1`** solo se usa en la máquina virtual; en un equipo real se quita.
-- **Datos personales fuera del repositorio:** la agenda y las sesiones.
-- **Thunar en lugar de Yazi:** se valoró un gestor de terminal, pero Thunar gana con el ratón, Discord, los USB y la partición de Windows.
-
----
-
-<a id="problemas"></a>
-## 6. Problemas conocidos
-
-| Síntoma | Causa y solución |
-|---|---|
-| Hyprland arranca y vuelve al `login:` | Ajustes de vídeo de la VM (ver [instalación, paso 0](#0-si-es-una-máquina-virtual-virtualbox)) |
-| `pacman` da `failed retrieving file ... 404` | Base de datos anticuada: `sudo pacman -Syu` |
-| El escritorio se ve enorme tras cambiar la escala | Se aplicó una escala inválida: pulsar **Revertir** en el panel |
-| `imv` no abre imágenes desde Thunar (solo en VM) | Necesita `LIBGL_ALWAYS_SOFTWARE=1`; `install.sh --vm` crea el lanzador |
-| Spotify de escritorio no dibuja ventana (solo en VM) | Limitación de la VM sin GPU; en hardware real se espera que funcione |
-| La franja inferior de la papelera de Thunar sigue gris | Pendiente de localizar su elemento en la hoja de estilo |
-
----
-
 <a id="pendiente"></a>
-## 7. 📝 Pendiente
+## 5. 📝 Pendiente
 
 **Hecho hasta ahora**
 
