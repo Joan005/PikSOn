@@ -7,7 +7,9 @@ github-cli
 gnome-themes-extra
 grub
 gvfs
+hypridle
 hyprland
+hyprlock
 imv
 kitty
 less

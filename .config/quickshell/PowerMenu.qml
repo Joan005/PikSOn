@@ -11,7 +11,6 @@ PopupWindow {
 
     readonly property var items: [
         { id: "lock", t: "Bloquear pantalla", i: "\uf023", c: ["sh", "-c", "command -v hyprlock >/dev/null && hyprlock || loginctl lock-session"], danger: false, confirm: false },
-        { id: "suspend", t: "Suspender", i: "\uf186", c: ["systemctl", "suspend"], danger: false, confirm: false },
         { id: "logout", t: "Cerrar sesión", i: "\uf08b", c: ["sh", "-c", "hyprctl dispatch exit || loginctl terminate-user $USER"], danger: false, confirm: true },
         { id: "reboot", t: "Reiniciar", i: "\uf021", c: ["systemctl", "reboot"], danger: false, confirm: true },
         { id: "poweroff", t: "Apagar", i: "\uf011", c: ["systemctl", "poweroff"], danger: true, confirm: true }
