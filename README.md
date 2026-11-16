@@ -23,8 +23,8 @@ PikSOn/
         ├── Theme.qml        # Tema: colores, tamaños y fuentes (singleton)
         ├── Wallpaper.qml    # Fondo de pantalla
         ├── wallpaper.jpg    # Imagen del fondo
-        ├── Bar.qml          # Barra superior: workspaces, música, reloj, tiempo, volumen, red, avisos y apagado
-        ├── Player.qml       # Chip de música de la barra (cualquier reproductor MPRIS)
+        ├── Bar.qml          # Barra superior: workspaces, música, reloj, tiempo, volumen, red, avisos, ajustes y apagado
+        ├── Player.qml       # Chip de música de la barra (siempre visible; cualquier reproductor MPRIS)
         ├── PlayerPanel.qml  # Panel del reproductor: carátula, progreso, controles y letra
         ├── Lyrics.qml       # Lógica de la letra sincronizada (LRCLIB)
         ├── LyricsFloat.qml  # Columna fija de letra a la derecha de la pantalla
@@ -36,12 +36,14 @@ PikSOn/
         ├── WeatherPanel.qml # Panel del tiempo
         ├── NetPanel.qml     # Panel de red y Bluetooth: el medallón
         ├── Calendar.qml     # Calendario con agenda de tareas
+        ├── SettingsPanel.qml # Ajustes (la tuerca): gestión de pantallas
         ├── PowerMenu.qml    # Menú de apagado
         ├── Dock.qml         # Dock lateral oculto: ventanas abiertas y bandeja (se despliega al pasar el ratón)
         └── scripts/
             ├── net.sh       # Resumen de red para el chip (debe ser ejecutable)
             ├── netinfo.sh   # Detalle de red para el panel (debe ser ejecutable)
-            └── trayquit.sh  # Cierra la app de un icono de la bandeja (debe ser ejecutable)
+            ├── trayquit.sh  # Cierra la app de un icono de la bandeja (debe ser ejecutable)
+            └── monitor-set.sh # Aplica en caliente la configuración de un monitor (debe ser ejecutable)
 ```
 
 | Elemento | Descripción |
@@ -53,9 +55,11 @@ PikSOn/
 | `zsh/.zprofile` | Lanza Hyprland al iniciar sesión en el TTY1 |
 | `.config/hypr/` | Configuración de Hyprland, incluidos el monitor, los atajos, los bordes y el cursor |
 | `.config/kitty/` | Configuración del terminal |
-| `.config/quickshell/` | Tema, barra, paneles, dock lateral, fondo y scripts de apoyo |
+| `.config/quickshell/` | Tema, barra, paneles, ajustes, dock lateral, fondo y scripts de apoyo |
 
 > 💡 Las carpetas de `.config/` replican la ruta que tendrían en `~/.config`. `zsh/` está fuera porque `.zshrc` y `.zprofile` viven en la carpeta personal; con GNU Stow se enlazarán automáticamente.
+
+> ⚠️ **`~/.config/hypr/monitors.lua` NO está en el repositorio a propósito**: lo genera el panel de Pantallas ([9.20](#920-ajustes-la-tuerca-y-el-panel-de-pantallas)) y es propio de cada equipo (nombres de monitor, resoluciones y escalas de esa máquina). Por eso, de la carpeta de Hyprland se copia **solo `hyprland.lua`** ([11.5](#115-subir-cambios)).
 
 ---
 
@@ -200,6 +204,7 @@ sudo systemctl enable --now vboxservice
 | Controlador gráfico | **VMSVGA** |
 | Aceleración 3D | **Habilitada** |
 | Memoria de vídeo | **128 MB** (el máximo) |
+| Número de monitores | 1 (o **2** para probar el arrastre de pantallas, [9.20](#920-ajustes-la-tuerca-y-el-panel-de-pantallas)) |
 
 > 💡 Los programas que dibujan con OpenGL (kitty, Quickshell) fallan en VirtualBox con errores como `invalid arguments for wl_surface#attach` o `Could not create EGL surface`. La solución es la variable `LIBGL_ALWAYS_SOFTWARE=1` (apartados [5](#s5) y [9](#s9)). **No debe usarse en hardware real.**
 
@@ -416,7 +421,7 @@ Uso básico: `Ctrl+O` guarda, `Ctrl+X` sale y `Ctrl+W` busca.
 
 > ⚠️ Si editas un fichero **por fuera** (con `sed`, por ejemplo) mientras sigue abierto en nano, el aviso **Modified** indica que nano tiene su propia copia sin guardar: al guardar desde nano, **sobrescribirá** el cambio externo. Cierra nano antes, o corrige dentro de nano (`Ctrl + \` busca y reemplaza).
 
-> 💡 **Antes de reemplazar un fichero grande** (`Bar.qml`, `Dock.qml`), haz una copia fuera del repositorio: `cp $HOME/.config/quickshell/Bar.qml $HOME/Bar.qml.bak1`. Así, si algo sale mal, se vuelve atrás con un `cp`. Las copias viven en `~`, **nunca** dentro de `~/.config/quickshell` ni del repositorio.
+> 💡 **Antes de reemplazar un fichero grande** (`Bar.qml`, `Dock.qml`, `SettingsPanel.qml`), haz una copia fuera del repositorio: `cp $HOME/.config/quickshell/Bar.qml $HOME/Bar.qml.bak1`. Así, si algo sale mal, se vuelve atrás con un `cp`. Las copias viven en `~`, **nunca** dentro de `~/.config/quickshell` ni del repositorio.
 
 ### Números de línea
 
@@ -441,6 +446,8 @@ cat -n $HOME/.config/quickshell/Bar.qml | sed -n '124,190p'
 > 💡 Si en «Replace with» se pulsa `Enter` **sin escribir nada**, el texto buscado se **borra**. Es la forma rápida de quitar una línea concreta.
 
 > 💡 La búsqueda **no distingue mayúsculas de minúsculas** y encuentra el texto aunque sea parte de otro más largo (`height: 28` también casaría con `implicitHeight: 28`). Para saber cuántas coincidencias habrá, conviene contarlas antes con `grep -n "texto" fichero`.
+
+> 💡 «Replace with» solo admite **una línea**. Para insertar varias, se va a la línea con `Ctrl + _` (o se busca con `Ctrl + W`), se pulsa `Home` o `End` y se pega el bloque.
 
 ### Cortar o sustituir un bloque de líneas
 
@@ -538,15 +545,28 @@ echo "tema=[$XCURSOR_THEME] tamaño=[$XCURSOR_SIZE]"     # tamaño=[16]
 
 ### Otros ajustes de `hyprland.lua`: monitor, escala y frecuencia
 
-El monitor se configura en el bloque `hl.monitor` (al principio de `hyprland.lua`, en la sección `MONITORS`):
+El monitor se configura al principio de `hyprland.lua`, en la sección `MONITORS`. **Desde que existe el panel de Pantallas ([9.20](#920-ajustes-la-tuerca-y-el-panel-de-pantallas)), ese bloque carga primero `~/.config/hypr/monitors.lua`** (que escribe el panel) y solo usa la regla fija de siempre como **respaldo**, si ese fichero no existe o falla:
 
 ```lua
-hl.monitor({
-    output   = "",
-    mode     = "preferred",
-    position = "auto",
-    scale    = "1.25",
-})
+-- monitores: los guarda el panel de Pantallas de Quickshell en monitors.lua
+local ok = pcall(dofile, os.getenv("HOME") .. "/.config/hypr/monitors.lua")
+if not ok then
+    hl.monitor({
+        output   = "",
+        mode     = "preferred",
+        position = "auto",
+        scale    = "1.25",
+    })
+end
+```
+
+`pcall` protege de los errores: si `monitors.lua` no existe todavía (equipo recién clonado) o tiene un fallo, se aplica la regla de respaldo y **nunca se queda uno sin pantalla**.
+
+`monitors.lua` lo escribe el panel y tiene una línea por monitor, por ejemplo:
+
+```lua
+-- Generado por el panel de Pantallas de Quickshell. No lo edite a mano.
+hl.monitor({ output = "Virtual-1", mode = "1920x955@60.00", position = "0x0", scale = "1.25" })
 ```
 
 Con `scale = "auto"`, en la VM Hyprland elige **1,67** (no conoce el tamaño físico de la pantalla). Con una pantalla de 1920 × 955, eso deja unos **1152 × 573 píxeles útiles**, y las aplicaciones con tamaño mínimo se recortan. Por eso la escala se fija a mano:
@@ -557,11 +577,13 @@ Con `scale = "auto"`, en la VM Hyprland elige **1,67** (no conoce el tamaño fí
 | **`1.25`** (la que se usa) | 1536 × 764 | Todo cabe y se lee bien |
 | `1` | 1920 × 955 | Todo cabe, pero el texto es muy pequeño |
 
-Comprueba la escala y la resolución con `hyprctl monitors` (líneas `scale:` y la primera, con `@`). Hyprland recarga la configuración al guardar; si no, `hyprctl reload`.
+Comprueba la escala y la resolución con `hyprctl monitors` (líneas `scale:` y la primera, con `@`) o, en formato de datos, con `hyprctl monitors -j`. Hyprland recarga la configuración al guardar; si no, `hyprctl reload`.
+
+> ⚠️ **Hyprland solo admite escalas con las que el tamaño lógico de la pantalla sea un número ENTERO.** En una pantalla de 955 px de alto, la escala 1,5 da 636,67 px: Hyprland la rechaza con *«Invalid scale passed to monitor Virtual-1: 1.50, using suggested scale: 1.67»* y pone otra (la sugerida). Con 1920 × 955 valen, por ejemplo, 1,0 y 1,25 (955 ÷ 1,25 = 764). Con 1920 × 1080 valen también 1,5 y 2. Si el panel de Pantallas aplica una escala inválida, el escritorio se ve enorme: se pulsa **Revertir** ([9.20](#920-ajustes-la-tuerca-y-el-panel-de-pantallas)).
 
 > 💡 Al cambiar la escala hay que **reajustar el tamaño de letra** del terminal ([5.2](#52-configuración-propia-kittyconf)): con 1,25 se usa 10.
 
-> 💡 **Frecuencia (Hz):** la VM solo ofrece **60 Hz**, así que la de un monitor de 165 Hz solo se puede usar en **hardware real**. Allí se fija en `mode`: `mode = "1920x1080@165"`, o `mode = "highrr"` para que Hyprland elija la frecuencia más alta. En un equipo real, revisa también la escala.
+> 💡 **Frecuencia (Hz):** la VM solo ofrece **60 Hz**, así que la de un monitor de 165 Hz solo se puede usar en **hardware real**. Allí se elige desde el panel de Pantallas, o se fija a mano en `mode`: `mode = "1920x1080@165"`, o `mode = "highrr"` para que Hyprland elija la frecuencia más alta. En un equipo real, revisa también la escala.
 
 > 💡 **Discord necesita ≈ 940 px de ancho:** en pantalla dividida (≈ 750 px por mitad con la escala 1,25) puede recortarse por la derecha. Se resuelve con la distribución de las ventanas, no con la escala.
 
@@ -599,7 +621,7 @@ hl.config({
 <a id="s9"></a>
 ## 9. 🧩 Quickshell: barra, paneles y fondo
 
-**Quickshell** es un kit para construir la interfaz del escritorio (barras, paneles, widgets) con QML. Aquí se usa para una barra superior **«solo texto»** (sin cajas ni adornos: workspaces en números romanos, música, reloj, tiempo, volumen, red, avisos y apagado), un panel desplegable por cada pieza, una columna lateral con la letra de la canción, un **dock lateral oculto** (ventanas abiertas y bandeja del sistema, que aparece al pasar el ratón por el borde derecho) y el fondo de pantalla. Todo comparte colores, tamaños y **una única tipografía** (JetBrains Mono Nerd Font) a través de un **tema** ([9.13](#913-tema-themeqml)).
+**Quickshell** es un kit para construir la interfaz del escritorio (barras, paneles, widgets) con QML. Aquí se usa para una barra superior **«solo texto»** (sin cajas ni adornos: workspaces en números romanos, música, reloj, tiempo, volumen, red, avisos, ajustes y apagado), un panel desplegable por cada pieza, una columna lateral con la letra de la canción, un **dock lateral oculto** (ventanas abiertas y bandeja del sistema, que aparece al pasar el ratón por el borde derecho) y el fondo de pantalla. Todo comparte colores, tamaños y **una única tipografía** (JetBrains Mono Nerd Font) a través de un **tema** ([9.13](#913-tema-themeqml)).
 
 ### 9.1 Instalación
 
@@ -633,11 +655,13 @@ La configuración vive en `~/.config/quickshell/` y se divide en piezas:
 | `Weather.qml` / `WeatherPanel.qml` | El tiempo ([9.17](#917-el-tiempo)) |
 | `NetPanel.qml` | Panel de red y Bluetooth, el medallón ([9.7](#97-panel-de-red-el-medallón)) |
 | `Calendar.qml` | Calendario con agenda de tareas ([9.12](#912-calendario-y-agenda)) |
+| `SettingsPanel.qml` | Ajustes (la tuerca): gestión de pantallas ([9.20](#920-ajustes-la-tuerca-y-el-panel-de-pantallas)) |
 | `PowerMenu.qml` | Menú de apagado ([9.18](#918-menú-de-apagado)) |
 | `Dock.qml` | Dock lateral oculto: ventanas abiertas y bandeja ([9.4](#94-dock-lateral-ventanas-y-bandeja)) |
 | `scripts/net.sh` | Resumen de la red para el chip (`tipo\|dispositivo\|ip`) |
 | `scripts/netinfo.sh` | Detalle de la red para el panel (`clave=valor`) |
 | `scripts/trayquit.sh` | Cierra del todo la app de un icono de la bandeja |
+| `scripts/monitor-set.sh` | Aplica en caliente la configuración de un monitor ([9.20](#920-ajustes-la-tuerca-y-el-panel-de-pantallas)) |
 
 `shell.qml`:
 
@@ -665,7 +689,7 @@ Quickshell **recarga solo** al guardar un fichero. Si hay un error, aparece una 
 
 > 💡 **Los workspaces son números romanos** (I a V) a la izquierda de la barra: el del escritorio activo va en dorado y negrita, los demás atenuados, y un clic cambia de escritorio. Solo se muestran los que **existen** (aparecen al usarlos con `Super + 1…5`). Se dibujan con un `Row` (`wsRow`) que lee `Hyprland.workspaces` y cambia con `Hyprland.dispatch`. (Se probó una versión de «lomos de libros» y se descartó por recargada.)
 
-> 💡 **Altura:** la ventana de la barra mide **36 px** (`implicitHeight` en `Bar.qml`), con un degradado suave y una línea fina de latón de 1 px abajo. Los grupos de la derecha (tiempo, volumen, red, campana y apagado) se separan con un filete vertical de 1 px.
+> 💡 **Altura:** la ventana de la barra mide **36 px** (`implicitHeight` en `Bar.qml`), con un degradado suave y una línea fina de latón de 1 px abajo. Los grupos de la derecha (tiempo, volumen, red, campana, **tuerca** y apagado) se separan con un filete vertical de 1 px.
 
 > 💡 El dock (`Dock.qml`) **no reserva espacio**: está oculto salvo cuando se despliega, y se superpone a lo que haya debajo ([9.4](#94-dock-lateral-ventanas-y-bandeja)).
 
@@ -849,6 +873,12 @@ Erratas reales encontradas al montar esta configuración:
 | El dock no existe en absoluto | No hay ventanas ni apps en la bandeja (`visible` es falso) | Abrir una ventana; es lo esperado |
 | Un icono del dock sale como una **letra** | No se encuentra el icono de esa app (`iconPath` vacío) | Es el comportamiento previsto; el nombre del `.desktop` debe coincidir con el `appId` (`hyprctl clients` lo muestra como `class`) |
 | Cuesta «cazar» el borde del dock | La franja de reposo (6 px) es muy fina | Subir `railClosed` a 10 en `Dock.qml` |
+| «Nada suena» se ve con **otra tipografía** | `font.italic: true`: JetBrains Mono Nerd Font no trae cursiva y Qt usa otra fuente | No usar cursiva en la barra |
+| Al pulsar el título del chip sin reproductor no pasa nada | Es lo previsto: `onClicked: if (chip.player) ...` | Poner música y volver a pulsar |
+| El panel de Pantallas se sale por la derecha o el escritorio se ve enorme | Se aplicó una **escala inválida**; Hyprland puso la sugerida (1,67) | Pulsar **Revertir** (o esperar a la cuenta atrás) |
+| Pantalla recortada tras probar `monitor-set.sh` | Se copió un **ejemplo** (`1920x1080`) en lugar de la resolución real (`1920x955`) | `monitor-set.sh NOMBRE 1920x955@60 0x0 1.25` o `hyprctl reload`; usar siempre los valores que da `hyprctl monitors -j` |
+| El rectángulo del esquema de pantallas sobresale de su caja | El encuadre se calculaba con las medidas actuales y no con las pendientes (rotación, escala) | `recalcFrame()` con `dimsOf()` y `clip: true` en la caja |
+| «Replace with» de nano no admite varias líneas | El campo es de una sola línea | Ir a la línea con `Ctrl + _` y pegar el bloque |
 
 Y en los scripts de shell y en la terminal:
 
@@ -875,6 +905,7 @@ Y en los scripts de shell y en la terminal:
 | La hora de la barra va una hora atrasada | Zona horaria del sistema en UTC | `sudo timedatectl set-timezone Europe/Madrid` ([1.3](#13-zona-horaria-y-hora)) |
 | Discord o Brave se recortan | Escala del monitor demasiado alta (1,67 en la VM) | `scale = "1.25"` ([apartado 8](#otros-ajustes-de-hyprlandlua-monitor-escala-y-frecuencia)) |
 | `notify-send` da error | Falta `libnotify` o no hay servidor de avisos en marcha | `sudo pacman -S --needed libnotify` y comprobar que Quickshell está en marcha |
+| `monitor-set.sh` responde `keyword: ... \| eval: ...` en lugar de `ok` | Hyprland rechazó el monitor, el modo o la escala | Leer el mensaje; comprobar nombre, `WxH@Hz` y que la escala sea válida |
 
 > 💡 Para ficheros largos, lo más seguro es reemplazarlos enteros ([apartado 6](#s6)) en lugar de retocar llaves a mano.
 
@@ -1149,19 +1180,21 @@ La ventana de la barra es **transparente** (`color: "transparent"`) y no hay caj
 
 ### 9.11 Chip de música en la barra
 
-En la barra, junto a los workspaces, aparece lo que suena, por ejemplo **`Andrea Bocelli - Con Te Partirò / Time To Say Goodbye`**, con tres botones (anterior, pausa/reproducir, siguiente). Funciona con **cualquier reproductor** que se anuncie por **MPRIS**: Spotify, VLC, mpv o el propio navegador (Brave anuncia los vídeos de YouTube).
+En la barra, junto a los workspaces, hay **siempre** un chip de música, sin caja ni borde (coherente con la barra «solo texto»). Funciona con **cualquier reproductor** que se anuncie por **MPRIS**: Spotify, VLC, mpv o el propio navegador (Brave anuncia los vídeos de YouTube).
 
 | Elemento | Efecto |
 |---|---|
-| Primer botón | Canción anterior |
-| Segundo botón | Pausa o reproducir (el icono cambia según el estado) |
-| Tercer botón | Canción siguiente |
-| Texto | «Canción - Artista», recortado a 180 px con `…`. **Al pulsarlo se abre el panel del reproductor** ([9.14](#914-panel-del-reproductor)) |
-| Sin reproductor | El chip no se muestra (hoy; ver [apartado 14](#s14)) |
+| Tres botones | Canción anterior, pausa/reproducir (el icono cambia según el estado) y siguiente |
+| Miniatura (26 px) | La **carátula** (`trackArtUrl`) con un marquito dorado fino; si no hay carátula, un pequeño **disco dorado** |
+| Línea 1 | «Canción - Artista», recortada con `…` (ancho fijo de 150 px) |
+| Línea 2 | El tiempo, **«1:40 / 3:38»**, que avanza cada segundo |
+| Pulsar el título | Abre o cierra el panel del reproductor ([9.14](#914-panel-del-reproductor)) |
+
+**Sin reproductor** el chip **no desaparece**: mantiene su sitio y su ancho (**258 px fijos**, así el resto de la barra no se mueve), muestra «Nada suena» y «--:-- / --:--», y los botones y la miniatura quedan **atenuados e inertes**. Pulsar el título no abre ningún panel, y si el reproductor desaparece con el panel abierto, este se cierra solo.
 
 **Qué reproductor elige:** `Spotify` si está abierto; si no, el que esté sonando; si no, el primero de la lista (`pickPlayer()`).
 
-**Cómo se recorta el texto** (`shortText()`): se quita lo que va entre paréntesis (`(Live From ...)`), y solo se añade el artista si el título aún no lleva un guion.
+**Cómo se compone el texto:** `shortText()` quita lo que va entre paréntesis (`(Live From ...)`) y solo añade el artista si el título aún no lleva un guion. `timeText()` da `m:ss / m:ss` y, si el reproductor no informa de la duración, solo la posición. Un `Timer` de 1 s llama a `player.positionChanged()` mientras suena, porque **la posición no se actualiza sola**.
 
 **Comprobar que el reproductor se anuncia**, con `playerctl` ([apartado 12](#s12)) y algo sonando:
 
@@ -1171,15 +1204,17 @@ playerctl status                                        # Playing
 playerctl metadata --format '{{artist}} - {{title}}'
 ```
 
-El chip es `Player.qml`: sin caja ni borde (coherente con la barra «solo texto»), con la propiedad `opened` que abre y cierra el panel. En `Bar.qml` se coloca con `id: playerChip` y se le pasa al panel su reproductor (`player: playerChip.player`).
-
 | Pieza | Función |
 |---|---|
 | `Mpris.players` | La lista de reproductores que se anuncian (módulo `Quickshell.Services.Mpris`) |
 | `pickPlayer()` | Elige el reproductor, con preferencia por Spotify |
-| `shortText()` | Compone el texto corto |
-| `opened` | Interruptor que abre y cierra el panel del reproductor |
+| `shortText()` / `timeText()` | Componen el título y el tiempo |
+| `opened` | Interruptor que abre y cierra el panel; se pone a falso si el reproductor desaparece (`onPlayerChanged`) |
 | `"\uf048"`, `"\uf04b"`, `"\uf04c"`, `"\uf051"` | Iconos de anterior, reproducir, pausa y siguiente (Nerd Font) |
+
+En `Bar.qml` el chip se coloca con `id: playerChip`; el panel se muestra con `visible: playerChip.opened && playerChip.player !== null` y recibe `player: playerChip.player`.
+
+> 💡 **Nada de cursiva en la barra:** JetBrains Mono Nerd Font no trae variante cursiva y Qt la sustituye por otra tipografía, que se ve distinta al resto. El estado vacío se distingue por el color atenuado.
 
 > ⚠️ **Spotify de escritorio en la VM:** el cliente (instalado con `sudo pacman -S spotify-launcher`) arranca, pero **no dibuja ventana ni se anuncia por MPRIS**, ni con `LIBGL_ALWAYS_SOFTWARE=1` ni con `--disable-gpu`; es una limitación de la máquina virtual sin GPU. El chip se prueba con **Brave** (un vídeo de YouTube) y debería reconocer a Spotify en hardware real.
 
@@ -1281,8 +1316,8 @@ Singleton {
 | `line` | Bordes finos y filetes |
 | `fg` | Texto principal (vainilla) |
 | `fgMuted` | Texto secundario y etiquetas |
-| `accent` | El color de énfasis (dorado): workspace activo, deslizadores, línea activa de la letra, raya de la ventana activa del dock |
-| `accent2` | Segundo énfasis (terracota): «Cerrar» en la bandeja |
+| `accent` | El color de énfasis (dorado): workspace activo, deslizadores, línea activa de la letra, raya de la ventana activa del dock, botones activos del panel de Pantallas |
+| `accent2` | Segundo énfasis (terracota): «Cerrar» en la bandeja, avisos de estado |
 | `ok` | Estado correcto (verde apagado) |
 | `fgOnAccent` | Texto que va **sobre** `accent` |
 | `radius`, `radiusSmall` | Esquinas de paneles y de las casillas pequeñas |
@@ -1307,11 +1342,11 @@ Rectangle {
 
 > 💡 **Cambiar los colores = editar este fichero.** Pero el terminal ([5.2](#52-configuración-propia-kittyconf)) y los bordes de las ventanas ([apartado 8](#otros-ajustes-de-hyprlandlua-bordes-y-separación)) tienen sus propias copias de la paleta y hay que cambiarlos aparte.
 
-> 💡 Algunos paneles (medallón de red, carátula del reproductor) y el dock usan además **colores propios** escritos en sus ficheros. Pasarlos al tema está pendiente ([apartado 14](#s14)).
+> 💡 Algunos paneles (medallón de red, carátula del reproductor), el dock y el panel de Pantallas usan además **colores propios** escritos en sus ficheros. Pasarlos al tema está pendiente ([apartado 14](#s14)).
 
 ### 9.14 Panel del reproductor
 
-Al **pulsar el texto de la canción** se despliega, bajo el chip, un panel sobrio de 340 px. Un segundo clic, o pulsar fuera, lo cierra.
+Al **pulsar el texto de la canción** se despliega, bajo el chip, un panel sobrio de 340 px. Un segundo clic, o pulsar fuera, lo cierra. Solo se abre si hay reproductor.
 
 | Elemento | Qué hace |
 |---|---|
@@ -1443,7 +1478,7 @@ En `Bar.qml`:
 
 | Pieza | Función |
 |---|---|
-| `calOpen`, `netOpen`, `powerOpen`, `soundOpen`, `notifOpen`, `weatherOpen` | Un interruptor por panel |
+| `calOpen`, `netOpen`, `powerOpen`, `soundOpen`, `notifOpen`, `settingsOpen`, `weatherOpen` | Un interruptor por panel |
 | `anyOpen` | `readonly`: verdadero si cualquiera está abierto |
 | `closeAll()` | Cierra todos |
 | `toggle(name)` | Abre el panel `name` y cierra los demás (**exclusión mutua**), o lo cierra si ya estaba abierto |
@@ -1454,6 +1489,103 @@ Cada chip llama a `root.toggle("netOpen")`, `root.toggle("soundOpen")`, etc. Los
 > 💡 Al pulsar fuera, el clic **se consume** (no llega a la ventana de debajo): es la contrapartida de este método, y la habitual en otros escritorios.
 
 > 💡 Los bloques `HyprlandFocusGrab` que quedan en algunos paneles no hacen nada y están pendientes de retirar ([apartado 14](#s14)).
+
+> ⚠️ Si se cierra el panel de Pantallas pulsando fuera **durante la cuenta atrás** de un cambio, la cuenta sigue y, si no se vuelve a abrir para confirmar, el cambio **se revierte** a los 15 s.
+
+### 9.20 Ajustes (la tuerca) y el panel de Pantallas
+
+Entre la campana y el botón de apagado hay una **tuerca** (`\uf013`) que abre el panel de **Ajustes**. Por ahora solo contiene la sección **Pantallas** (`SettingsPanel.qml`); más adelante se le añadirán otras. Es un panel de 560 × 560 px, bajo la tuerca, con el mismo estilo sobrio que los demás.
+
+| Zona | Qué hace |
+|---|---|
+| **Esquema** (524 × 190 px) | Los monitores dibujados **a escala**, colocados como en el escritorio y numerados; el elegido va resaltado en dorado. Se pulsa uno para seleccionarlo. Con **dos o más** monitores se pueden **arrastrar** para reorganizarlos |
+| **Línea de información** | Número, descripción, nombre, resolución, frecuencia y posición del monitor elegido |
+| **Resolución** | Lista (con desplazamiento) de todas las resoluciones que ofrece el monitor; la actual lleva «· actual» |
+| **Frecuencia** | Píldoras con las frecuencias disponibles para la resolución elegida |
+| **Escala** | 100 %, 125 %, 150 %, 175 % y 200 % |
+| **Rotación** | 0°, 90°, 180° y 270°, con vista previa en el esquema |
+| **Aplicar / Descartar** | Aplica los cambios pendientes, o los descarta y vuelve a lo actual |
+| **Cuenta atrás** | Tras aplicar: «¿Conservar esta configuración? Se revierte en 15 s», con **Revertir** y **Conservar y guardar** |
+
+Todos los cambios (resolución, frecuencia, escala, posición y rotación) quedan **pendientes** hasta pulsar **Aplicar**. Si algo sale mal y no se puede ver la pantalla, **a los 15 s se revierte sola**, como en Windows. **Conservar y guardar** vuelve a leer el estado real de todos los monitores y escribe `~/.config/hypr/monitors.lua`, que `hyprland.lua` carga al arrancar ([apartado 8](#otros-ajustes-de-hyprlandlua-monitor-escala-y-frecuencia)).
+
+#### Cómo funciona por dentro
+
+| Pieza | Función |
+|---|---|
+| `hyprctl monitors -j` | Lee los monitores (nombre, descripción, tamaño, frecuencia, posición, escala, rotación y `availableModes`); el panel lo ejecuta al abrirse |
+| `scripts/monitor-set.sh` | Aplica el cambio en caliente con `hyprctl keyword monitor NOMBRE,MODO,XxY,ESCALA[,transform,N]`; si falla, prueba `hyprctl eval` con `hl.monitor({...})`. Responde `ok` o el mensaje de error |
+| `dimsOf(i)` / `posOf(i)` | Medidas y posición **lógicas** de cada monitor (con las pendientes del elegido: resolución, escala y rotación) |
+| `recalcFrame()` | Calcula el encuadre del esquema (con un margen del 35 % alrededor para poder arrastrar) cada vez que cambian los datos o las medidas pendientes |
+| `snapSelected()` | Al soltar un monitor arrastrado, lo **imanta** a los bordes de los demás (umbral de 60 px lógicos) y evita que se **solapen** |
+| `saveFile()` | Escribe `monitors.lua` con un `hl.monitor({...})` por monitor, usando `printf` desde un `Process` |
+
+`scripts/monitor-set.sh` (debe ser ejecutable):
+
+```sh
+#!/bin/sh
+# Aplica la configuracion de un monitor en caliente.
+# Uso: monitor-set.sh NOMBRE MODO POSICION ESCALA [TRANSFORM]
+# Ejemplo: monitor-set.sh Virtual-1 1920x955@60 0x0 1.25
+name="$1"
+mode="$2"
+pos="$3"
+scale="$4"
+tr="${5:-0}"
+spec="$name,$mode,$pos,$scale"
+if [ "$tr" != "0" ]; then
+    spec="$spec,transform,$tr"
+fi
+out=$(hyprctl keyword monitor "$spec" 2>&1)
+if [ "$out" = "ok" ]; then
+    echo "ok"
+    exit 0
+fi
+lua="hl.monitor({ output = \"$name\", mode = \"$mode\", position = \"$pos\", scale = \"$scale\" })"
+out2=$(hyprctl eval "$lua" 2>&1)
+if [ "$out2" = "ok" ]; then
+    echo "ok"
+    exit 0
+fi
+echo "keyword: $out | eval: $out2"
+```
+
+Se engancha a la barra con **cuatro piezas** en `Bar.qml`: la propiedad `settingsOpen` (también en `anyOpen` y `closeAll()`), el chip de la tuerca entre la campana y el apagado, y el bloque del panel:
+
+```qml
+SettingsPanel {
+    anchor.window: root
+    anchor.rect.x: root.width - implicitWidth - 8
+    anchor.rect.y: root.height + 4
+    visible: root.settingsOpen
+    onCloseRequested: root.settingsOpen = false
+}
+```
+
+**Probar el script a mano, con los valores REALES de su pantalla** (primero se consultan):
+
+```bash
+hyprctl monitors -j | grep -E '"name"|"width"|"height"|"refreshRate"|"scale"'
+sh $HOME/.config/quickshell/scripts/monitor-set.sh Virtual-1 1920x955@60 0x0 1.25     # debe responder: ok
+```
+
+**Comprobar que el guardado sobrevive a una recarga:**
+
+```bash
+cat $HOME/.config/hypr/monitors.lua      # una línea hl.monitor por monitor
+hyprctl reload
+hyprctl monitors -j | grep -E '"width"|"height"|"scale"'
+```
+
+> ⚠️ **Usa siempre los valores reales.** Probar el script con una resolución de ejemplo (`1920x1080` en una pantalla de 1920 × 955) deja el escritorio descuadrado y recortado. Se arregla volviendo a la real con el mismo script, o con `hyprctl reload`.
+
+> ⚠️ **Escalas inválidas:** Hyprland solo acepta escalas con las que el tamaño lógico sea entero ([apartado 8](#otros-ajustes-de-hyprlandlua-monitor-escala-y-frecuencia)). El panel hoy ofrece una lista fija de escalas y no filtra las inválidas: si se aplica una, el escritorio se ve enorme y hay que pulsar **Revertir**. Filtrarlas por resolución está pendiente ([apartado 14](#s14)).
+
+> 💡 **Probar el arrastre y la rotación con dos monitores en la VM:** con la máquina apagada, *Configuración → Pantalla → Número de monitores: 2* (con VMSVGA). El arrastre solo se activa con dos o más monitores.
+
+> 💡 `monitors.lua` es **propio de cada equipo** y no se sube al repositorio ([estructura](#estructura)). En un equipo nuevo, mientras no exista, se aplica la regla de respaldo de `hyprland.lua`.
+
+> 💡 El monitor **desactivado** no aparece en `hyprctl monitors -j`, por lo que el panel actual no puede volver a encender uno apagado. Por eso encender y apagar monitores queda para otra fase ([apartado 14](#s14)).
 
 ---
 
@@ -1524,13 +1656,13 @@ cd PikSOn
 
 ### 11.5 Subir cambios
 
-Los ficheros de configuración que se editan en `~/.config` hay que **copiarlos al repositorio** antes de subirlos. Desde la carpeta del repositorio, con rutas relativas:
+Los ficheros de configuración que se editan en `~/.config` hay que **copiarlos al repositorio** antes de subirlos. Desde la carpeta del repositorio, con rutas relativas. **De Hyprland se copia solo `hyprland.lua`**, para que `monitors.lua` (propio de cada equipo) no entre al repositorio:
 
 ```bash
 cd $HOME/PikSOn
 cp -r $HOME/.config/quickshell .config/
 cp -r $HOME/.config/kitty .config/
-cp -r $HOME/.config/hypr .config/
+cp $HOME/.config/hypr/hyprland.lua .config/hypr/hyprland.lua
 ```
 
 Para un **fichero suelto** (cada uno con su origen y su destino, y sin `-r`):
@@ -1553,13 +1685,13 @@ git push
 
 > 💡 `cp -r` sobrescribe los ficheros del mismo nombre, pero **no borra** del repositorio los que hayas eliminado de tu carpeta local. Por eso conviene mirar `git status` antes de subir.
 
-> 💡 Revisa siempre `git status` antes de hacer `git add .`: deben aparecer solo los ficheros que esperas, sin copias `.bak` ni nombres raros.
+> 💡 Revisa siempre `git status` antes de hacer `git add .`: deben aparecer solo los ficheros que esperas, sin copias `.bak`, sin `monitors.lua` y sin nombres raros.
 
-> 💡 Los scripts nuevos deben conservar su permiso de ejecución: tras `git add .`, `git ls-files -s .config/quickshell/scripts` debe mostrar `100755` en todos.
+> 💡 Los scripts nuevos deben conservar su permiso de ejecución: tras `git add .`, `git ls-files -s .config/quickshell/scripts` debe mostrar `100755` en todos (incluido `monitor-set.sh`).
 
 > ⚠️ **No copies nunca `~/.config` completo** al repositorio: contiene el token de GitHub (`gh`), datos del navegador y sesiones. Copia solo las carpetas que configures a propósito. Elimina antes las copias `.bak` (`rm -f ~/.config/quickshell/*.bak`).
 
-> ⚠️ Los datos personales (`agenda.json`, la futura `libros.json`...) **viven fuera del repositorio**, en `~/.local/share/pikson/`, y no se suben.
+> ⚠️ Los datos personales (`agenda.json`, la futura `libros.json`...) **viven fuera del repositorio**, en `~/.local/share/pikson/`, y no se suben. Tampoco `~/.config/hypr/monitors.lua`.
 
 ### 11.6 Cómo se sincronizan las copias
 
@@ -1667,9 +1799,11 @@ Consulta y controla Hyprland en marcha:
 | Comando | Efecto |
 |---|---|
 | `hyprctl monitors` | Resolución, frecuencia, **escala** y modos disponibles de cada monitor |
+| `hyprctl monitors -j` | Lo mismo en JSON (lo lee el panel de Pantallas); `\| grep -E '"name"\|"width"\|"height"\|"scale"'` da un resumen |
+| `hyprctl keyword monitor NOMBRE,1920x955@60,0x0,1.25` | Aplica un monitor **en caliente** (lo usa `monitor-set.sh`); responde `ok` |
 | `hyprctl clients` | Las ventanas abiertas: clase (`class`, que es el `appId` del dock), tamaño, posición, `pid` y si usan XWayland |
 | `hyprctl layers` | Las capas de Quickshell (barra, dock, fondo, letra, recogedora) |
-| `hyprctl reload` | Recarga la configuración |
+| `hyprctl reload` | Recarga la configuración (relee `hyprland.lua` y `monitors.lua`) |
 
 ### qs (Quickshell)
 
@@ -1685,10 +1819,10 @@ Consulta y controla Hyprland en marcha:
 Antes de usar un icono nuevo en Quickshell (`"\uf16a"`), se comprueba que **existe en la fuente** escribiéndolo en kitty. Si sale un dibujo, sirve; si sale un rombo o un recuadro vacío, hay que elegir otro código:
 
 ```bash
-printf '\uf16a  \uf1bc  \uf001  \uf0e8  \uf1eb  \uf011\n'
+printf '\uf16a  \uf1bc  \uf001  \uf0e8  \uf1eb  \uf011  \uf013\n'
 ```
 
-> 💡 Los códigos son los de **Font Awesome** dentro de Nerd Font. Algunos no coinciden con lo que se espera (`\uf167` no es el logotipo de YouTube en esta fuente), por eso conviene probarlos siempre.
+> 💡 Los códigos son los de **Font Awesome** dentro de Nerd Font. Algunos no coinciden con lo que se espera (`\uf167` no es el logotipo de YouTube en esta fuente), por eso conviene probarlos siempre. `\uf013` es la tuerca de los ajustes.
 
 ### zsh, plugins y starship
 
@@ -1782,7 +1916,7 @@ Pide la contraseña (no se ve al teclear). Para volver a bash: `chsh -s /bin/bas
 
 > 💡 El cambio de shell es **un ajuste del sistema** (`/etc/passwd`), no un fichero del repositorio: git no lo guarda ni lo restaura. **En cada equipo nuevo hay que repetir `chsh`**.
 
-> 💡 Hyprland, Quickshell y los scripts (`net.sh`, `netinfo.sh`, `trayquit.sh`) usan `/bin/sh`, **no** la shell del usuario: cambiar a zsh no les afecta.
+> 💡 Hyprland, Quickshell y los scripts (`net.sh`, `netinfo.sh`, `trayquit.sh`, `monitor-set.sh`) usan `/bin/sh`, **no** la shell del usuario: cambiar a zsh no les afecta.
 
 > 💡 Si Inicio, Fin o Supr escriben símbolos raros, añade (con `>>`, dos signos, para no borrar el fichero):
 > ```bash
@@ -1822,7 +1956,9 @@ El fondo de pantalla viaja dentro de `.config/quickshell/` (`Wallpaper.qml` y `w
 
 Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1](#11-red-networkmanager)). Activa también el audio ([apartado 1.2](#12-audio-pipewire)): los paquetes de PipeWire llegan con `pkglist.txt`, pero sus servicios de usuario se activan con `systemctl --user enable --now pipewire pipewire-pulse wireplumber`. Ajusta la **zona horaria** ([1.3](#13-zona-horaria-y-hora)), que tampoco viaja con el repositorio.
 
-**Cambia la shell a zsh** (`chsh -s /usr/bin/zsh`; este ajuste **no viaja con el repositorio**) y **cierra la sesión del TTY** (`exit`) para iniciarla de nuevo: salir de Hyprland no basta ([apartado 12](#s12)). Con el `.zprofile` copiado, Hyprland arranca solo tras el login ([apartado 4.1](#41-arranque-automático-de-hyprland)); si no, entra con `start-hyprland`. La barra y los paneles arrancan solos; el **dock** está oculto y aparece al llevar el ratón al borde derecho (y solo existe cuando hay alguna ventana o app en segundo plano); el chip de música se ve cuando hay algo sonando.
+**Cambia la shell a zsh** (`chsh -s /usr/bin/zsh`; este ajuste **no viaja con el repositorio**) y **cierra la sesión del TTY** (`exit`) para iniciarla de nuevo: salir de Hyprland no basta ([apartado 12](#s12)). Con el `.zprofile` copiado, Hyprland arranca solo tras el login ([apartado 4.1](#41-arranque-automático-de-hyprland)); si no, entra con `start-hyprland`. La barra y los paneles arrancan solos; el **dock** está oculto y aparece al llevar el ratón al borde derecho (y solo existe cuando hay alguna ventana o app en segundo plano); el chip de música está siempre en la barra («Nada suena» si no hay reproductor).
+
+**Pantallas en un equipo nuevo:** `monitors.lua` **no** viaja con el repositorio. Mientras no exista, Hyprland usa la regla de respaldo de `hyprland.lua` (escala 1,25, modo preferido). Ajusta resolución, frecuencia y escala con el panel de la tuerca ([9.20](#920-ajustes-la-tuerca-y-el-panel-de-pantallas)) y pulsa **Conservar y guardar**: se creará el `monitors.lua` de ese equipo. En hardware real, revisa antes que la escala `1.25` sea **válida** para su resolución ([apartado 8](#otros-ajustes-de-hyprlandlua-monitor-escala-y-frecuencia)).
 
 **Datos personales:** la agenda (`~/.local/share/pikson/agenda.json`) **no** viaja con el repositorio. En un equipo nuevo empezará vacía; si se quiere conservar, se copia a mano.
 
@@ -1830,7 +1966,7 @@ Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1
 |---|---|
 | `pkglist.txt` | Paquetes de los repositorios oficiales |
 | `aur-pkglist.txt` | Paquetes del AUR |
-| `.config/` | Configuración de Hyprland, Quickshell (con su tema, sus paneles y el dock) y kitty |
+| `.config/` | Configuración de Hyprland, Quickshell (con su tema, sus paneles, los ajustes y el dock) y kitty |
 | `zsh/.zshrc` | Configuración de zsh (se copia a `~/.zshrc`) |
 | `zsh/.zprofile` | Arranque automático de Hyprland en el TTY1 (se copia a `~/.zprofile`) |
 
@@ -1849,13 +1985,13 @@ Si el equipo aún usa `systemd-networkd`, cambia a NetworkManager ([apartado 1.1
 
 **Hecho hasta ahora**
 
-Barra «solo texto» con workspaces en números romanos; paneles de música (con letra sincronizada y columna lateral), calendario con agenda, sonido, avisos, tiempo, red (medallón) y menú de apagado; cierre al pulsar fuera; tipografía única; dock lateral oculto con ventanas abiertas y bandeja.
+Barra «solo texto» con workspaces en números romanos; chip de música siempre visible; paneles de música (con letra sincronizada y columna lateral), calendario con agenda, sonido, avisos, tiempo, red (medallón) y menú de apagado; cierre al pulsar fuera; tipografía única; dock lateral oculto con ventanas abiertas y bandeja; **tuerca de ajustes con el panel de Pantallas** (esquema a escala, resolución, frecuencia, escala, rotación, arrastre con imán, cuenta atrás de 15 s y guardado permanente en `monitors.lua`).
 
 **Siguiente, por construir (en este orden)**
 
 - [ ] **Red + camino de la conexión**: conservar el medallón y añadir un esquema *Equipo → Router → Internet* con las IP, la velocidad y la latencia (con `ping`)
-- [ ] **Chip de música siempre visible**: miniatura, título y tiempo, sin caja; con un ancho fijo, «Nada suena» cuando no hay reproductor y un estado vacío en el panel (hoy el chip se oculta sin reproductor)
-- [ ] **Pantallas**: leer los monitores con `hyprctl monitors -j`, escribir `monitors.lua` y revertir a los 15 s si no se confirma
+- [ ] **Pantallas, siguientes fases**: 1) filtrar las **escalas válidas** para cada resolución (las que dan un tamaño lógico entero) en lugar de la lista fija; 2) **encender y apagar** monitores (los apagados no salen en `hyprctl monitors -j`; habrá que leer también `hyprctl monitors all -j`); 3) espejo y monitor principal; 4) probar el **arrastre y la rotación con dos monitores** (hoy solo probados con uno)
+- [ ] **Más secciones en la tuerca**: apariencia (fondo y tema), teclado, energía; y un resumen del sistema
 - [ ] **Batería** (en hardware real)
 - [ ] **Sistema**: CPU, RAM, disco y temperatura; al pulsarlo abre Pantallas
 - [ ] **Lanzador** (diseño «B»): calculadora, categorías y atajo de teclado
@@ -1880,7 +2016,7 @@ Barra «solo texto» con workspaces en números romanos; paneles de música (con
 - [ ] Quitar los bloques `HyprlandFocusGrab` que ya no hacen nada
 - [ ] Sacar `ttf-cormorant` de las listas de paquetes y regenerar `pkglist.txt` y `aur-pkglist.txt`
 - [ ] Corregir `tempColor` del panel del tiempo (opcional)
-- [ ] Pasar al tema los colores propios de los paneles (el latón del medallón, el papel de la carátula)
+- [ ] Pasar al tema los colores propios de los paneles (el latón del medallón, el papel de la carátula, los del panel de Pantallas)
 
 **Tema y estética**
 
@@ -1900,7 +2036,7 @@ Barra «solo texto» con workspaces en números romanos; paneles de música (con
 **Repositorio y hardware real**
 
 - [ ] Instalar Spotify de escritorio y probarlo (en la VM no dibuja ventana)
-- [ ] Frecuencia del monitor (165 Hz) y revisión de la escala
+- [ ] Frecuencia del monitor (165 Hz) y revisión de la escala, ahora desde el panel de Pantallas
 - [ ] Probar el Wi-Fi y el Bluetooth (`bluez`, `bluez-utils`) con el panel medallón, y revisar el volumen y el silencio con el rango completo
 - [ ] GNU Stow para enlazar configuraciones (incluidos `zsh/.zshrc` y `zsh/.zprofile`)
 - [ ] Script `install.sh` que automatice este manual, preguntando si es una **VM o un equipo real** para aplicar o quitar lo que depende de ello: `virtualbox-guest-utils`, `LIBGL_ALWAYS_SOFTWARE=1`, la escala y la frecuencia del monitor
