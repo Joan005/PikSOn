@@ -104,16 +104,15 @@ Arranca con la ISO oficial de Arch (grabada con Rufus en modo *Imagen DD*, o con
 | Teclado | **Inglés (US)** |
 | Perfil | **Mínimo**, sin escritorio |
 | Red | **NetworkManager** |
-| **Paquetes adicionales** | **`git nano base-devel github-cli`** |
+| **Paquetes adicionales** | **`git nano base-devel`** |
 
 > ⚠️ Los paquetes adicionales se olvidan con facilidad. Sin `git`, no se puede clonar el repositorio.
 
 ### Paso 2. Clonar y ejecutar
 
-Reinicia, entra con tu usuario y, si el repositorio es privado, inicia sesión en GitHub (el código de 8 caracteres se introduce desde otro dispositivo):
+Reinicia, entra con tu usuario, clona el repositorio y ejecuta el script:
 
 ```bash
-gh auth login
 git clone https://github.com/Joan005/PikSOn
 cd PikSOn
 bash install.sh --vm        # o --real en un equipo físico
