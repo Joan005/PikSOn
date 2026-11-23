@@ -249,8 +249,11 @@ El gestor de archivos (`Super + E`), con el mismo lenguaje visual que la barra: 
 | `Super + 1…5` | Ir al escritorio 1…5 |
 | `Super + Shift + 1…5` | Mover la ventana al escritorio 1…5 |
 | `Super + clic izquierdo` y arrastrar | Mover la ventana |
+| `Super + clic izquierdo` mantenido + rueda del ratón | Llevar la ventana agarrada a otro escritorio |
 | `Super + clic derecho` y arrastrar | Redimensionar la ventana |
 | `Super + Shift + E` | Salir de Hyprland |
+
+> 💡 **Para mover una ventana de escritorio hay dos formas:** con el teclado, `Super + Shift` y el número del escritorio; o con el ratón, manteniendo `Super` y el clic izquierdo sobre la ventana y **girando la rueda**: la ventana va agarrada y llega contigo al escritorio que elijas.
 
 ---
 
@@ -274,7 +277,8 @@ Barra «solo texto» con workspaces en números romanos; chip de música siempre
 
 - [ ] **Red + camino de la conexión**: conservar el medallón y añadir un esquema *Equipo → Router → Internet* con las IP, la velocidad y la latencia (con `ping`)
 - [ ] **Pantallas, siguientes fases**: 1) filtrar las **escalas válidas** para cada resolución (las que dan un tamaño lógico entero) en lugar de la lista fija; 2) **encender y apagar** monitores (los apagados no salen en `hyprctl monitors -j`; habrá que leer también `hyprctl monitors all -j`); 3) espejo y monitor principal
-- [ ] **Más secciones en la tuerca**: apariencia (fondo y tema), teclado, energía; y un resumen del sistema
+- [ ] **Sección «Fondo de pantalla» en la tuerca**: añadir y cambiar el fondo sin tocar ficheros, con una rejilla de miniaturas de una carpeta, un botón «Añadir imagen…», aplicación al instante, vista previa a escala en el esquema del monitor y una opción para aplicarlo también a la pantalla de bloqueo. Hoy el fondo y el bloqueo leen el mismo fichero, `wallpaper.jpg`; las imágenes personales irían a `~/.local/share/pikson/`, fuera del repositorio. A decidir: la misma imagen o una por monitor, el ajuste (rellenar, ajustar o centrar), el oscurecimiento para el bloqueo, y la ruta del bloqueo, que hoy lleva el nombre de usuario
+- [ ] **Más secciones en la tuerca**: apariencia (tema), teclado, energía; y un resumen del sistema
 - [ ] **Descargador de vídeos** (idea): panel o app para descargar vídeos de internet con `yt-dlp` y `ffmpeg` (formatos, carpeta, cola de descargas), solo con contenido propio, libre o con permiso
 - [ ] **Batería** (en hardware real, si es un portátil)
 - [ ] **Sistema**: CPU, RAM, disco y temperatura; al pulsarlo abre Pantallas
@@ -324,6 +328,16 @@ Barra «solo texto» con workspaces en números romanos; chip de música siempre
 - [ ] Probar el Wi-Fi y el Bluetooth (`bluez`, `bluez-utils`) con el panel medallón, y revisar el volumen y el silencio con el rango completo
 - [ ] GNU Stow para enlazar configuraciones (incluidos `zsh/.zshrc` y `zsh/.zprofile`)
 - [ ] Login gráfico (SDDM, greetd con un greeter o uno propio con Quickshell), quitando el bloque de `~/.zprofile`
+
+**Futuro: PikSOn-Sec, un GRUB propio y un USB con menú**
+
+La idea es tener **dos sistemas** en el mismo equipo: **PikSOn**, para el trabajo diario, y **PikSOn-Sec**, para ciberseguridad, sin mezclar las herramientas ofensivas con el sistema de todos los días. Todo es para **aprendizaje y laboratorios**: máquinas vulnerables a propósito, retos CTF, y equipos propios o con autorización por escrito.
+
+- [ ] **PikSOn-Sec** sería **el mismo repositorio con otro perfil** del instalador (`install.sh --perfil cyber`): la misma base y el mismo escritorio, más una lista de herramientas de seguridad (por ejemplo, desde el repositorio BlackArch) y un acento de color distinto para reconocerlo de un vistazo. Se probaría primero en una máquina virtual
+- [ ] **Aislamiento entre los dos sistemas.** Con un doble arranque sin cifrar, un PikSOn-Sec comprometido podría leer y manipular PikSOn. Se reduce con: cifrado **LUKS en cada sistema con contraseñas distintas**; no montar nunca las particiones del otro; **una partición de arranque (EFI) propia por sistema**; no compartir `/home`, ni claves, ni contraseñas; contraseña en la BIOS y en GRUB. Lo más fuerte es un **disco físico aparte** para PikSOn-Sec (idealmente un SSD externo) y elegirlo con el menú de arranque de la UEFI
+- [ ] **GRUB personalizado**: tema propio en `/boot/grub/themes` (fondo, tipografía con `grub-mkfont`, colores de *Pergamino nocturno*), con las entradas «PikSOn», «PikSOn-Sec», «Windows» (con `os-prober`) y una de rescate. Se hace antes una maqueta visual y se prueba siempre en una VM, conservando una entrada de rescate. El tema viviría en una carpeta `grub/` del repositorio y `install.sh` lo instalaría solo en un equipo real
+- [ ] **USB instalador con menú**: arrancar el USB y elegir entre «Instalar PikSOn», «Instalar PikSOn-Sec», «Instalar ambos», probar sin instalar (live) y rescate. Cada entrada pasa una etiqueta al arranque (`pikson=desktop|sec|both`) y un script de la imagen lanza el instalador. Siempre pide confirmar el disco antes de borrar nada. Se hace en tres fases: 1) `archinstall` con la configuración guardada y un único comando; 2) la ISO propia con el menú; 3) la instalación doble y el GRUB con tema. Para «ambos», se abre una raíz tras otra en `/mnt` (`cryptsetup open`, `pacstrap`, `arch-chroot`, `install.sh`, `umount`), de modo que nunca están abiertas a la vez; y los ajustes de usuario (servicios de usuario, `gsettings` y la shell) irían mejor en el primer arranque de cada sistema que dentro del chroot
+- [ ] Una **animación** del proceso completo, de unos 100 segundos, hecha como guía de diseño para este instalador
 
 **A largo plazo: una ISO propia con mi Arch**
 
