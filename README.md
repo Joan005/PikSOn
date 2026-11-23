@@ -19,7 +19,8 @@ PikSOn/
     │   ├── settings.ini     # Aplicaciones GTK: tema oscuro, tipografía y cursor
     │   └── gtk.css          # Aspecto de Thunar y demás apps GTK (Pergamino nocturno)
     ├── hypr/
-    │   └── hyprland.lua     # Hyprland: monitor, atajos, bordes, cursor, terminal y arranque automático
+    │   ├── hyprland.lua     # Hyprland: monitor, atajos, bordes, cursor, terminal y arranque automático
+    │   └── hyprlock.conf    # Pantalla de bloqueo: fondo desenfocado, hora, fecha y contraseña
     ├── kitty/
     │   └── kitty.conf       # Terminal: tipografía, colores (Pergamino nocturno) y transparencia
     └── quickshell/
@@ -41,7 +42,7 @@ PikSOn/
         ├── NetPanel.qml     # Panel de red y Bluetooth: el medallón
         ├── Calendar.qml     # Calendario con agenda de tareas
         ├── SettingsPanel.qml # Ajustes (la tuerca): gestión de pantallas
-        ├── PowerMenu.qml    # Menú de apagado
+        ├── PowerMenu.qml    # Menú de apagado: bloquear, cerrar sesión, reiniciar y apagar
         ├── Dock.qml         # Dock lateral oculto: ventanas abiertas y bandeja
         └── scripts/
             ├── net.sh       # Resumen de red para el chip (debe ser ejecutable)
@@ -57,7 +58,7 @@ PikSOn/
 | `aur-pkglist.txt` | Paquetes del AUR, generada con `pacman -Qqem` |
 | `zsh/` | Shell zsh con plugins y starship, y el arranque automático de Hyprland en el TTY1 |
 | `.config/gtk-3.0/` | Aspecto de Thunar y de las aplicaciones GTK |
-| `.config/hypr/` | Configuración de Hyprland: monitor, atajos, bordes y cursor |
+| `.config/hypr/` | Configuración de Hyprland (monitor, atajos, bordes y cursor) y pantalla de bloqueo |
 | `.config/kitty/` | Configuración del terminal |
 | `.config/quickshell/` | Tema, barra, paneles, ajustes, dock lateral, fondo y scripts de apoyo |
 
@@ -126,7 +127,7 @@ Sin opción, el script pregunta si es una máquina virtual. Con `--dry-run` solo
 2. Instala los paquetes de `pkglist.txt` y `aur-pkglist.txt`.
 3. Copia la configuración (guardando antes una copia de lo existente en `~/.config-backup-FECHA`).
 4. Activa NetworkManager y PipeWire, y fija la zona horaria y zsh como shell.
-5. Aplica lo propio de **VM o equipo real** (la variable de renderizado por software, `virtualbox-guest-utils`...).
+5. Aplica lo propio de **VM o equipo real** (la variable de renderizado por software, el modo de captura de la pantalla de bloqueo, `virtualbox-guest-utils`...).
 6. Ajusta GTK (tipografía, tema oscuro y cursor) con `gsettings`.
 
 Todo queda registrado en `~/pikson-install.log`, con una lista de avisos al final.
@@ -148,12 +149,13 @@ Se entra por el **TTY1** con usuario y contraseña; el `~/.zprofile` lanza `star
 |---|---|
 | **Hyprland** | El compositor (gestor de ventanas en mosaico), configurado en Lua |
 | **Quickshell** | Construye la barra, los paneles y el dock con QML |
+| **hyprlock** | Pantalla de bloqueo con el mismo tema |
 | **kitty** + **zsh** + **starship** | Terminal, shell y prompt |
 | **Thunar** | Gestor de archivos, vestido como una extensión de la barra |
 | **Brave**, **Discord**, **imv** | Navegador, chat y visor de imágenes |
 | **PipeWire** y **NetworkManager** | Sonido y red |
 
-**La estética** se llama *Pergamino nocturno*: fondo `#34261b`, texto `#f6ebcf`, acento dorado `#e2b564`. Todo el escritorio usa **JetBrains Mono Nerd Font**. El tema vive en un solo fichero (`Theme.qml`) y se repite, adaptado, en kitty, en los bordes de Hyprland y en Thunar.
+**La estética** se llama *Pergamino nocturno*: fondo `#34261b`, texto `#f6ebcf`, acento dorado `#e2b564`. Todo el escritorio usa **JetBrains Mono Nerd Font**. El tema vive en un solo fichero (`Theme.qml`) y se repite, adaptado, en kitty, en los bordes de Hyprland, en Thunar y en la pantalla de bloqueo.
 
 > Se desarrolla y prueba en **VirtualBox**. El salto a un equipo real (arranque dual con Windows) está en marcha; ver [Pendiente](#pendiente).
 
@@ -164,7 +166,7 @@ Se entra por el **TTY1** con usuario y contraseña; el `~/.zprofile` lanza `star
 
 ### La barra «solo texto»
 
-Sin cajas ni adornos: texto sobre un degradado suave, con un filete fino de latón debajo. De izquierda a derecha: **workspaces en números romanos** (I a V), el **chip de música**, el **reloj** (en el centro), el **tiempo**, el **volumen**, la **red**, la **campana de avisos**, la **tuerca de ajustes** y el **apagado**. Cada uno abre su panel al pulsarlo, y un clic fuera los cierra.
+Sin cajas ni adornos: texto sobre un degradado suave, con un filete fino de latón debajo. De izquierda a derecha: **workspaces en números romanos** (I a V), el **chip de música**, el **reloj** (en el centro), el **tiempo**, el **volumen**, la **red**, la **campana de avisos**, la **tuerca de ajustes** y el **menú de apagado**. Cada uno abre su panel al pulsarlo, y un clic fuera los cierra.
 
 ### Música y letra sincronizada
 
@@ -187,6 +189,12 @@ Se abre al pulsar el reloj: el mes a la izquierda y las tareas del día a la der
 - **Tiempo:** el actual, las próximas 6 horas y 5 días (datos de Open-Meteo; solo se envían las coordenadas fijas de Barcelona).
 - **Red:** un **medallón** de latón con los datos de la conexión. La pestaña de cable muestra datos reales; Wi-Fi y Bluetooth son, de momento, de ejemplo.
 
+### Menú de apagado y pantalla de bloqueo
+
+El menú de apagado ofrece **Bloquear pantalla**, **Cerrar sesión**, **Reiniciar** y **Apagar**; las tres últimas piden una segunda pulsación para confirmarse. **Bloquear** (o `Super + L`) lanza `hyprlock`: el fondo de pantalla desenfocado, la hora grande, la fecha, el usuario y un campo de contraseña con marco dorado. Su configuración está en `~/.config/hypr/hyprlock.conf`.
+
+> ⚠️ En VirtualBox, `hyprlock` solo funciona con `screencopy_mode = 1` (captura por CPU). `install.sh --real` lo retira en un equipo físico, donde la captura por GPU es más rápida. Si el bloqueo se queda mal, pasa al **TTY2** y ejecuta `pkill hyprlock`.
+
 ### Ajustes: gestión de pantallas
 
 La **tuerca** abre el panel de Pantallas: un esquema a escala de los monitores, y selectores de **resolución, frecuencia, escala y rotación**. Con dos o más monitores se pueden **arrastrar** para colocarlos. Todo cambio pasa por **Aplicar**, con una **cuenta atrás de 15 segundos** que revierte sola si no se confirma, como en Windows. «Conservar y guardar» escribe `~/.config/hypr/monitors.lua`.
@@ -206,6 +214,7 @@ El gestor de archivos (`Super + E`), con el mismo lenguaje visual que la barra: 
 | `Super + E` | Gestor de archivos (Thunar) |
 | `Super + B` | Brave |
 | `Super + D` | Discord |
+| `Super + L` | Bloquear la pantalla |
 | `Super + Retroceso` | Cerrar la ventana activa |
 | `Super + 1…5` | Ir al escritorio 1…5 |
 | `Super + Shift + 1…5` | Mover la ventana al escritorio 1…5 |
@@ -220,29 +229,27 @@ El gestor de archivos (`Super + E`), con el mismo lenguaje visual que la barra: 
 
 **Hecho hasta ahora**
 
-Barra «solo texto» con workspaces en números romanos; chip de música siempre visible; paneles de música (con letra sincronizada y columna lateral), calendario con agenda, sonido, avisos, tiempo, red (medallón) y menú de apagado; cierre al pulsar fuera; tipografía única; dock lateral oculto con ventanas abiertas y bandeja; **tuerca de ajustes con el panel de Pantallas** (esquema a escala, resolución, frecuencia, escala, rotación, arrastre con imán, cuenta atrás de 15 s y guardado permanente en `monitors.lua`); **Thunar** con aspecto de la barra y visor de imágenes `imv`; **`install.sh` v1**, **probado con éxito en una VM limpia**.
+Barra «solo texto» con workspaces en números romanos; chip de música siempre visible; paneles de música (con letra sincronizada y columna lateral), calendario con agenda, sonido, avisos, tiempo, red (medallón) y menú de apagado; cierre al pulsar fuera; tipografía única; dock lateral oculto con ventanas abiertas y bandeja; **tuerca de ajustes con el panel de Pantallas** (esquema a escala, resolución, frecuencia, escala, rotación, arrastre con imán, cuenta atrás de 15 s y guardado permanente en `monitors.lua`); **Thunar** con aspecto de la barra y visor de imágenes `imv`; **pantalla de bloqueo** con `hyprlock` (`Super + L` y botón de la barra); **`install.sh` v1**, **probado con éxito en una VM limpia**.
 
 **Lo más inmediato: pasar a un equipo real**
 
-- [ ] Revisar los **avisos del registro** (`grep -n '!!' ~/pikson-install.log`) de la VM de prueba y recorrer una lista de comprobación (kitty, Thunar, Brave, Discord, `imv`, tipografía GTK, tuerca)
-- [ ] **`install.sh` v2**: controladores de la GPU, `multilib` (Steam), iconos de Thunar, `hyprlock` y `hypridle`
+- [ ] **`install.sh` v2**: controladores de la GPU, `multilib` (Steam, aparcado por ahora) e iconos de Thunar
 - [ ] Piezas del escritorio que aún no están y conviene añadir **antes de pasar a un equipo real**: capturas de pantalla (`grim` y `slurp`), portapapeles (`wl-clipboard`), agente de autenticación (polkit, por ejemplo `hyprpolkitagent`), fuente de emojis (`noto-fonts-emoji`) y decidir cómo se entra (TTY con `.zprofile` o un gestor gráfico)
 - [ ] **Preparar Windows para el arranque dual**: copia de seguridad, **clave de recuperación de BitLocker**, desactivar el «Inicio rápido», reducir la partición **desde Windows**, ajustar la hora (`timedatectl set-local-rtc 1`), GRUB con `os-prober` y, si se puede, **instalar en otro disco físico** para no tocar el arranque de Windows
 - [ ] En el equipo real: GPU (NVIDIA, AMD o Intel), sus **dos monitores** (3440×1440 a 165 Hz y uno vertical), Wi-Fi y Bluetooth, audio completo y Steam
+- [ ] Probar la **pantalla de bloqueo** en el equipo real (sin `screencopy_mode`) y, si se desea, la **suspensión automática** tras un minuto bloqueada (con `hypridle`; aparcada por ahora)
 
 **Siguiente, por construir (en este orden)**
 
 - [ ] **Red + camino de la conexión**: conservar el medallón y añadir un esquema *Equipo → Router → Internet* con las IP, la velocidad y la latencia (con `ping`)
-- [ ] **Pantallas, siguientes fases**: 1) filtrar las **escalas válidas** para cada resolución (las que dan un tamaño lógico entero) en lugar de la lista fija; 2) **encender y apagar** monitores (los apagados no salen en `hyprctl monitors -j`; habrá que leer también `hyprctl monitors all -j`); 3) espejo y monitor principal; 4) probar el **arrastre y la rotación con dos monitores** (hoy solo probados con uno)
+- [ ] **Pantallas, siguientes fases**: 1) filtrar las **escalas válidas** para cada resolución (las que dan un tamaño lógico entero) en lugar de la lista fija; 2) **encender y apagar** monitores (los apagados no salen en `hyprctl monitors -j`; habrá que leer también `hyprctl monitors all -j`); 3) espejo y monitor principal
 - [ ] **Más secciones en la tuerca**: apariencia (fondo y tema), teclado, energía; y un resumen del sistema
 - [ ] **Descargador de vídeos** (idea): panel o app para descargar vídeos de internet con `yt-dlp` y `ffmpeg` (formatos, carpeta, cola de descargas), solo con contenido propio, libre o con permiso
 - [ ] **Batería** (en hardware real, si es un portátil)
 - [ ] **Sistema**: CPU, RAM, disco y temperatura; al pulsarlo abre Pantallas
 - [ ] **Lanzador** (diseño «B»): calculadora, categorías y atajo de teclado
 - [ ] **Sonido**: medidor del micrófono en el panel
-- [ ] **Bloquear pantalla**: instalar `hyprlock` y configurarlo (hoy «Bloquear» no hace nada)
 - [ ] **Comprobar que se puede teclear** en el campo «Añadir una tarea» del calendario; si no, convertirlo en ventana de capa con foco de teclado
-- [ ] **Tarjeta de libros**: lo que estoy leyendo, con el porcentaje; los datos personales irían en `libros.json` (fuera del repositorio) con un `libros.example.json` de muestra
 - [ ] **Red y Bluetooth, fases 2 y 3 (hardware real)**: conectar las pestañas Wi-Fi y Bluetooth a `nmcli` y `bluetoothctl` en lugar de los datos de ejemplo; «Escanear redes» y «Escanear dispositivos»; la ficha de contraseña para las redes con candado; y que el botón de latón encienda y apague de verdad
 - [ ] **Reproductor**: probar el bucle con Spotify real (en Brave se ve atenuado) y la **cola** con la API web de Spotify (MPRIS no la expone)
 - [ ] **Animaciones**: 1) una transición común de apertura de los paneles (escala del 92 % al 100 % con aparición suave, aplicada al **contenido**); 2) movimiento discreto en el medallón de red; 3) cierres animados. Las animaciones en bucle solo deben ejecutarse **mientras el panel está abierto**: en la VM, con renderizado por software, pueden ir entrecortadas
@@ -251,7 +258,6 @@ Barra «solo texto» con workspaces en números romanos; chip de música siempre
 
 - [ ] **Iconos Papirus** con `papirus-folders` (carpetas marrones): `sudo pacman -S papirus-icon-theme`, `yay -S papirus-folders`, `sudo papirus-folders -C brown --theme Papirus-Dark` y `gsettings set org.gnome.desktop.interface icon-theme 'Papirus-Dark'`; aparcado por ahora
 - [ ] La **franja gris de la papelera**: localizar el nodo con `GTK_DEBUG=interactive thunar`
-- [ ] Comprobar que el diálogo **«Guardar como» de Brave** se ve bien tras instalar los portales y volver a entrar
 - [ ] Opcional: regla de ventana para que `imv` se abra flotando; `mpv` (vídeo) y `zathura` (PDF) con `xdg-mime`
 
 **Dock**
@@ -273,7 +279,7 @@ Barra «solo texto» con workspaces en números romanos; chip de música siempre
 
 - [ ] Fondo de pantalla de tonos cálidos, o tintar el actual hacia sepia
 - [ ] Comprobar en `hyprland.lua` las esquinas redondeadas de las ventanas (`rounding`, unos 14 para casar con `Theme.radius`) y la sombra
-- [ ] Una única fuente de colores para Quickshell, kitty, Hyprland y GTK (hoy están copiados en cuatro sitios)
+- [ ] Una única fuente de colores para Quickshell, kitty, Hyprland, GTK y `hyprlock` (hoy están copiados en cinco sitios)
 - [ ] Desenfoque de las ventanas (es pesado en la VM)
 
 **Escritorio**
