@@ -134,6 +134,7 @@ run chsh -s /usr/bin/zsh
 say "7/8 Ajustes segun el tipo de equipo ($MODE)"
 if [ "$MODE" = real ]; then
     run sed -i 's/env LIBGL_ALWAYS_SOFTWARE=1 //g' "$HOME/.config/hypr/hyprland.lua"
+    run sed -i "/screencopy_mode/d" "$HOME/.config/hypr/hyprlock.conf"
     run rm -f "$HOME/.local/share/applications/imv.desktop"
 else
     run sudo pacman -S --needed --noconfirm virtualbox-guest-utils
