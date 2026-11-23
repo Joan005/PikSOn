@@ -233,7 +233,7 @@ Barra «solo texto» con workspaces en números romanos; chip de música siempre
 
 **Lo más inmediato: pasar a un equipo real**
 
-- [ ] **`install.sh` v2**: controladores de la GPU, `multilib` (Steam, aparcado por ahora) e iconos de Thunar
+- [ ] **`install.sh` v2**: controladores de la GPU, `multilib` (Steam, aparcado por ahora), iconos de Thunar y un **selector de aplicaciones opcionales** (elegir cuáles instalar: Brave, Discord, Steam, Spotify...; la base del sistema se instala siempre, y los atajos de las apps no elegidas se quedan en `hyprland.lua` sin función, sin molestar). Se plantea con las listas separadas en base y opcionales, un menú en el script y un modo sin preguntas (`--all`, `--minimal`, `--apps ...`)
 - [ ] Piezas del escritorio que aún no están y conviene añadir **antes de pasar a un equipo real**: capturas de pantalla (`grim` y `slurp`), portapapeles (`wl-clipboard`), agente de autenticación (polkit, por ejemplo `hyprpolkitagent`), fuente de emojis (`noto-fonts-emoji`) y decidir cómo se entra (TTY con `.zprofile` o un gestor gráfico)
 - [ ] **Preparar Windows para el arranque dual**: copia de seguridad, **clave de recuperación de BitLocker**, desactivar el «Inicio rápido», reducir la partición **desde Windows**, ajustar la hora (`timedatectl set-local-rtc 1`), GRUB con `os-prober` y, si se puede, **instalar en otro disco físico** para no tocar el arranque de Windows
 - [ ] En el equipo real: GPU (NVIDIA, AMD o Intel), sus **dos monitores** (3440×1440 a 165 Hz y uno vertical), Wi-Fi y Bluetooth, audio completo y Steam
