@@ -8,7 +8,9 @@ Un escritorio **Arch Linux + Hyprland + Quickshell** con aire de biblioteca anti
 ```
 PikSOn/
 ├── README.md                # Este documento
-├── install.sh               # Instalador: paquetes, configuración, servicios y ajustes (debe ser ejecutable)
+├── install.sh               # Instalador: portada, selector de aplicaciones, paquetes, configuración y ajustes (debe ser ejecutable)
+├── ui.sh                    # Portada del instalador y utilidades visuales (la carga install.sh)
+├── opcionales.txt           # Aplicaciones opcionales que ofrece el selector del instalador
 ├── pkglist.txt              # Paquetes de los repositorios oficiales
 ├── aur-pkglist.txt          # Paquetes del AUR
 ├── zsh/
@@ -43,7 +45,7 @@ PikSOn/
         ├── Calendar.qml     # Calendario con agenda de tareas
         ├── SettingsPanel.qml # Ajustes (la tuerca): gestión de pantallas
         ├── PowerMenu.qml    # Menú de apagado: bloquear, cerrar sesión, reiniciar y apagar
-        ├── Dock.qml         # Dock lateral oculto: ventanas abiertas y bandeja
+        ├── Dock.qml         # Dock lateral oculto: tarjeta con ventanas abiertas y bandeja
         └── scripts/
             ├── net.sh       # Resumen de red para el chip (debe ser ejecutable)
             ├── netinfo.sh   # Detalle de red para el panel (debe ser ejecutable)
@@ -54,6 +56,8 @@ PikSOn/
 | Elemento | Descripción |
 |---|---|
 | `install.sh` | Instala el entorno completo sobre un Arch recién instalado |
+| `ui.sh` | Portada del instalador (un planeador hecho de letras y el logo) y utilidades de pantalla: pasos, avisos y barra |
+| `opcionales.txt` | Lista de aplicaciones opcionales, una por línea: `id\|paquetes\|descripción` |
 | `pkglist.txt` | Paquetes oficiales, generada con `pacman -Qqen` |
 | `aur-pkglist.txt` | Paquetes del AUR, generada con `pacman -Qqem` |
 | `zsh/` | Shell zsh con plugins y starship, y el arranque automático de Hyprland en el TTY1 |
@@ -119,16 +123,29 @@ cd PikSOn
 bash install.sh --vm        # o --real en un equipo físico
 ```
 
-Sin opción, el script pregunta si es una máquina virtual. Con `--dry-run` solo muestra lo que haría, sin cambiar nada. **No lo ejecutes como root.**
+Sin indicar el tipo de equipo, el script pregunta si es una máquina virtual. **No lo ejecutes como root.** Estas son todas las opciones:
+
+| Opción | Efecto |
+|---|---|
+| `--vm` / `--real` | Tipo de equipo: máquina virtual o equipo físico |
+| `--dry-run` | Muestra lo que haría, sin cambiar nada |
+| `--all` | Instala todas las aplicaciones opcionales |
+| `--minimal` | Instala solo la base, sin aplicaciones opcionales |
+| `--apps brave,imv` | Instala solo esas aplicaciones opcionales |
+| *(ninguna de las tres anteriores)* | Muestra un menú para elegir las aplicaciones |
 
 ### Paso 3. Qué hace el script
 
-1. Actualiza el sistema e instala `base-devel`, `git` y `yay`.
-2. Instala los paquetes de `pkglist.txt` y `aur-pkglist.txt`.
-3. Copia la configuración (guardando antes una copia de lo existente en `~/.config-backup-FECHA`).
-4. Activa NetworkManager y PipeWire, y fija la zona horaria y zsh como shell.
-5. Aplica lo propio de **VM o equipo real** (la variable de renderizado por software, el modo de captura de la pantalla de bloqueo, `virtualbox-guest-utils`...).
-6. Ajusta GTK (tipografía, tema oscuro y cursor) con `gsettings`.
+Tras mostrar la portada y dejarle **elegir las aplicaciones**, hace ocho pasos:
+
+1. Actualiza el sistema e instala `base-devel` y `git`.
+2. Instala `yay`, el ayudante del AUR.
+3. Instala los paquetes de `pkglist.txt` y `aur-pkglist.txt`, menos las aplicaciones que no haya elegido.
+4. Copia la configuración, guardando antes una copia de lo existente en `~/.config-backup-FECHA`.
+5. Activa NetworkManager y PipeWire.
+6. Fija la zona horaria y zsh como shell.
+7. Aplica lo propio de **VM o equipo real**: en una VM, `virtualbox-guest-utils` y el renderizado por software; en un equipo real, los quita, junto con el modo de captura de la pantalla de bloqueo.
+8. Ajusta GTK (tipografía, tema oscuro y cursor) con `gsettings`.
 
 Todo queda registrado en `~/pikson-install.log`, con una lista de avisos al final.
 
@@ -164,6 +181,14 @@ Se entra por el **TTY1** con usuario y contraseña; el `~/.zprofile` lanza `star
 <a id="que-incluye"></a>
 ## 3. Qué incluye
 
+### El instalador
+
+Al ejecutar `install.sh` aparece una **portada**: un planeador hecho de letras moradas, el logo de PikSOn con un degradado de vainilla a cobre, y el subtítulo. El dibujo solo se muestra si la terminal tiene unas 32 filas o más. Todo se dibuja con colores de 24 bits, y en la consola TTY pura se reduce solo a 16 colores y símbolos sencillos.
+
+Antes de instalar, un **selector** deja elegir qué aplicaciones opcionales se quieren, y la base del sistema se instala siempre. Las aplicaciones elegibles están en `opcionales.txt` (Brave, Discord, Thunar con sus dependencias, `imv` y Spotify), cada una con los paquetes que le pertenecen. En el menú, se marca o desmarca cada una con su número (se puede escribir varios juntos, como `13`), `a` marca todas, `n` ninguna y `Enter` continúa. El script **quita en memoria** los paquetes de lo no elegido, sin tocar `pkglist.txt` ni `aur-pkglist.txt`, que se siguen regenerando con `pacman -Qqen` y `pacman -Qqem`. Para añadir una aplicación opcional, basta con una línea nueva en `opcionales.txt`.
+
+> 💡 Los **atajos de teclado** de las aplicaciones no elegidas se quedan en `hyprland.lua`: sin la aplicación no hacen nada, y no estorban.
+
 ### La barra «solo texto»
 
 Sin cajas ni adornos: texto sobre un degradado suave, con un filete fino de latón debajo. De izquierda a derecha: **workspaces en números romanos** (I a V), el **chip de música**, el **reloj** (en el centro), el **tiempo**, el **volumen**, la **red**, la **campana de avisos**, la **tuerca de ajustes** y el **menú de apagado**. Cada uno abre su panel al pulsarlo, y un clic fuera los cierra.
@@ -176,7 +201,12 @@ El chip de música funciona con **cualquier reproductor MPRIS** (Spotify, VLC, e
 
 ### Dock lateral oculto
 
-En reposo no se ve. Al llevar el ratón al **borde derecho** aparece, con las **ventanas abiertas** (clic para llevarlas al frente, clic derecho para cerrarlas) y la **bandeja del sistema** (las apps que siguen en segundo plano, con un botón para cerrarlas del todo).
+En reposo no se ve. Al llevar el ratón al **borde derecho** aparece una **tarjeta flotante** de esquinas redondeadas, **a la altura del ratón**, con dos secciones:
+
+- **Ventanas:** una fila por aplicación, con un contador `×2` si tiene varias ventanas abiertas. El clic izquierdo pasa de una ventana a la siguiente de esa aplicación, y el clic derecho cierra una. La aplicación activa va marcada con una pastilla dorada.
+- **Segundo plano:** la bandeja del sistema (las aplicaciones que siguen abiertas en segundo plano, como Discord), con un botón «Cerrar» para cerrarlas del todo.
+
+Los iconos son **monocromos**, teñidos con los colores del tema, y solo la tarjeta y una fina franja del borde reciben clics: el resto del borde queda libre.
 
 ### Calendario y agenda
 
@@ -229,11 +259,12 @@ El gestor de archivos (`Super + E`), con el mismo lenguaje visual que la barra: 
 
 **Hecho hasta ahora**
 
-Barra «solo texto» con workspaces en números romanos; chip de música siempre visible; paneles de música (con letra sincronizada y columna lateral), calendario con agenda, sonido, avisos, tiempo, red (medallón) y menú de apagado; cierre al pulsar fuera; tipografía única; dock lateral oculto con ventanas abiertas y bandeja; **tuerca de ajustes con el panel de Pantallas** (esquema a escala, resolución, frecuencia, escala, rotación, arrastre con imán, cuenta atrás de 15 s y guardado permanente en `monitors.lua`); **Thunar** con aspecto de la barra y visor de imágenes `imv`; **pantalla de bloqueo** con `hyprlock` (`Super + L` y botón de la barra); **`install.sh` v1**, **probado con éxito en una VM limpia**.
+Barra «solo texto» con workspaces en números romanos; chip de música siempre visible; paneles de música (con letra sincronizada y columna lateral), calendario con agenda, sonido, avisos, tiempo, red (medallón) y menú de apagado; cierre al pulsar fuera; tipografía única; **dock lateral en tarjeta flotante** (ventanas agrupadas por aplicación, bandeja del sistema, iconos monocromos y aparición a la altura del ratón); **tuerca de ajustes con el panel de Pantallas** (esquema a escala, resolución, frecuencia, escala, rotación, arrastre con imán, cuenta atrás de 15 s y guardado permanente en `monitors.lua`); **Thunar** con aspecto de la barra y visor de imágenes `imv`; **pantalla de bloqueo** con `hyprlock` (`Super + L` y botón de la barra); **`install.sh`** con portada, pasos con color y **selector de aplicaciones opcionales** (`--all`, `--minimal`, `--apps`), basado en la versión que ya se probó con éxito en una VM limpia.
 
 **Lo más inmediato: pasar a un equipo real**
 
-- [ ] **`install.sh` v2**: controladores de la GPU, `multilib` (Steam, aparcado por ahora), iconos de Thunar y un **selector de aplicaciones opcionales** (elegir cuáles instalar: Brave, Discord, Steam, Spotify...; la base del sistema se instala siempre, y los atajos de las apps no elegidas se quedan en `hyprland.lua` sin función, sin molestar). Se plantea con las listas separadas en base y opcionales, un menú en el script y un modo sin preguntas (`--all`, `--minimal`, `--apps ...`)
+- [ ] **Probar el nuevo `install.sh` en una VM limpia** (portada, selector y los ocho pasos con `bash install.sh --vm`), que hasta ahora solo se ha probado con `--dry-run`
+- [ ] **`install.sh` v3**: controladores de la GPU, `multilib` (Steam, aparcado por ahora) e iconos de Thunar
 - [ ] Piezas del escritorio que aún no están y conviene añadir **antes de pasar a un equipo real**: capturas de pantalla (`grim` y `slurp`), portapapeles (`wl-clipboard`), agente de autenticación (polkit, por ejemplo `hyprpolkitagent`), fuente de emojis (`noto-fonts-emoji`) y decidir cómo se entra (TTY con `.zprofile` o un gestor gráfico)
 - [ ] **Preparar Windows para el arranque dual**: copia de seguridad, **clave de recuperación de BitLocker**, desactivar el «Inicio rápido», reducir la partición **desde Windows**, ajustar la hora (`timedatectl set-local-rtc 1`), GRUB con `os-prober` y, si se puede, **instalar en otro disco físico** para no tocar el arranque de Windows
 - [ ] En el equipo real: GPU (NVIDIA, AMD o Intel), sus **dos monitores** (3440×1440 a 165 Hz y uno vertical), Wi-Fi y Bluetooth, audio completo y Steam
@@ -262,10 +293,7 @@ Barra «solo texto» con workspaces en números romanos; chip de música siempre
 
 **Dock**
 
-- [ ] Agrupar las ventanas de una misma aplicación en una sola fila (hoy hay una fila por ventana)
-- [ ] Pasar los iconos de las ventanas a **monocromo** (hoy van a color) para casar con la barra
 - [ ] Comprobar el dock con la **columna de letra abierta** y con varias ventanas en distintos workspaces (¿mostrar solo las del workspace actual?)
-- [ ] Pasar al tema los colores propios del dock (`#f52d1e12`, filetes) y retirar el posible aviso de `iconPath` en `qs log`
 
 **Limpieza del código**
 
