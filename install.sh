@@ -1,171 +1,338 @@
-#!/bin/bash
-# install.sh - instala el entorno PikSOn sobre un Arch recien instalado.
-# Uso: bash install.sh [--vm | --real] [--dry-run]
+#!/usr/bin/env bash
+# install.sh: instala el escritorio PikSOn (Arch Linux + Hyprland + Quickshell).
+#
+# Uso:
+#   bash install.sh --vm | --real        tipo de equipo (si se omite, el script pregunta)
+#   bash install.sh --dry-run            muestra lo que haría, sin cambiar nada
+#   bash install.sh --all                instala todas las aplicaciones opcionales
+#   bash install.sh --minimal            solo la base, sin aplicaciones opcionales
+#   bash install.sh --apps brave,imv     solo esas aplicaciones opcionales
+#   (sin opciones de aplicaciones, el script ofrece un menú para elegirlas)
+#
+# No lo ejecute como root. Todo queda registrado en ~/pikson-install.log
+
 set -u
 
-REPO="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 LOG="$HOME/pikson-install.log"
-MODE=""
+DATE="$(date +%Y%m%d-%H%M%S)"
+BACKUP="$HOME/.config-backup-$DATE"
+
+MODE=""          # vm | real
 DRY=0
+APPS_MODE="ask"  # ask | all | minimal | list
+APPS_LIST=""
 FAILS=()
 
-for a in "$@"; do
-    case "$a" in
-        --vm) MODE=vm ;;
-        --real) MODE=real ;;
+# ---------- Portada y utilidades visuales (ui.sh) ----------
+if [ -f "$SCRIPT_DIR/ui.sh" ]; then
+    # shellcheck source=/dev/null
+    source "$SCRIPT_DIR/ui.sh"
+else
+    portada() { printf '\n  PikSOn · Arch Linux + Hyprland + Quickshell\n\n'; }
+    paso()  { printf '\n> [%s/%s] %s\n' "$1" "$2" "$3"; }
+    ok()    { printf '  + %s\n' "$1"; }
+    aviso() { printf '  ! %s\n' "$1"; }
+    C_FG=''; C_GOLD=''; C_COPPER=''; C_DIM=''; C_OFF=''; C_BOLD=''
+fi
+
+uso() { sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; }
+
+# ---------- Argumentos ----------
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --vm)      MODE=vm ;;
+        --real)    MODE=real ;;
         --dry-run) DRY=1 ;;
-        *) echo "Opcion desconocida: $a"; exit 1 ;;
+        --all)     APPS_MODE=all ;;
+        --minimal) APPS_MODE=minimal ;;
+        --apps)    shift; APPS_MODE=list; APPS_LIST="${1:-}" ;;
+        -h|--help) uso; exit 0 ;;
+        *) printf 'Opción desconocida: %s\n\n' "$1"; uso; exit 1 ;;
     esac
+    shift
 done
 
+# ---------- Portada (antes de redirigir la salida al registro) ----------
+portada
+
+# ---------- Registro: todo lo que sale por pantalla queda en el log ----------
 exec > >(tee -a "$LOG") 2>&1
+printf '=== PikSOn install.sh · %s · dry-run=%s ===\n' "$DATE" "$DRY"
 
-say()  { printf '\n\033[1;33m==> %s\033[0m\n' "$*"; }
-warn() { printf '\033[1;31m!! %s\033[0m\n' "$*"; FAILS+=("$*"); }
-run()  { if [ "$DRY" = 1 ]; then echo "[dry-run] $*"; else "$@" || warn "Fallo: $*"; fi; }
-
-# --- comprobaciones previas ---
-if [ "$(id -u)" = 0 ]; then
-    echo "No lo ejecutes como root: usa tu usuario normal (con sudo)."
+# ---------- Comprobaciones previas ----------
+if [ "$(id -u)" -eq 0 ]; then
+    printf 'No ejecute este script como root; use su usuario normal (usa sudo cuando hace falta).\n'
     exit 1
 fi
-[ -f /etc/arch-release ] || { echo "Esto solo vale para Arch Linux."; exit 1; }
-[ -f "$REPO/pkglist.txt" ] || { echo "Ejecutalo desde el repositorio (falta pkglist.txt)."; exit 1; }
-ping -c1 -W3 archlinux.org >/dev/null 2>&1 || { echo "No hay conexion a internet."; exit 1; }
+if [ ! -f /etc/arch-release ]; then
+    printf 'Esto no parece Arch Linux (falta /etc/arch-release).\n'
+    exit 1
+fi
+if [ ! -f "$SCRIPT_DIR/pkglist.txt" ]; then
+    printf 'Falta pkglist.txt junto al script. Ejecútelo desde la carpeta del repositorio.\n'
+    exit 1
+fi
+if ! ping -c1 -W3 archlinux.org > /dev/null 2>&1 && ! ping -c1 -W3 1.1.1.1 > /dev/null 2>&1; then
+    if [ "$DRY" = 1 ]; then
+        aviso "Sin conexión a internet (se ignora en --dry-run)."
+    else
+        printf 'No hay conexión a internet.\n'
+        exit 1
+    fi
+fi
 
+# ---------- Tipo de equipo ----------
 if [ -z "$MODE" ]; then
-    read -r -p "Es una maquina virtual (VirtualBox)? [s/N] " r
-    case "$r" in
-        s|S|y|Y) MODE=vm ;;
-        *) MODE=real ;;
-    esac
-fi
-say "Modo: $MODE   (dry-run: $DRY)   registro: $LOG"
-[ "$DRY" = 1 ] || sudo -v
-
-# --- 1. sistema base ---
-say "1/8 Actualizando el sistema"
-run sudo pacman -Syu --noconfirm
-run sudo pacman -S --needed --noconfirm base-devel git
-
-# --- 2. yay ---
-say "2/8 Instalando yay (AUR)"
-if ! command -v yay >/dev/null 2>&1; then
-    if [ "$DRY" = 1 ]; then
-        echo "[dry-run] compilar e instalar yay-bin desde el AUR"
+    if [ -t 0 ]; then
+        read -r -p "  ¿Es una máquina virtual? [s/N] " resp
+        case "$resp" in [sSyY]*) MODE=vm ;; *) MODE=real ;; esac
     else
-        tmp="$(mktemp -d)"
-        if git clone https://aur.archlinux.org/yay-bin.git "$tmp/yay-bin"; then
-            (cd "$tmp/yay-bin" && makepkg -si --noconfirm) || warn "No se pudo instalar yay"
-        else
-            warn "No se pudo descargar yay-bin"
-        fi
-        rm -rf "$tmp"
+        printf 'Indique el tipo de equipo con --vm o --real.\n'
+        exit 1
     fi
 fi
+ok "Tipo de equipo: $MODE"
 
-# --- 3. paquetes ---
-install_list() {
-    local file="$1" tool="$2" pkgs p
-    pkgs="$(grep -v -E '^[[:space:]]*(#|$)' "$file")"
-    if [ "$MODE" = real ]; then
-        pkgs="$(echo "$pkgs" | grep -v -E '^virtualbox-guest-utils$')"
-    fi
+# ---------- Ejecutar o simular ----------
+run() {
     if [ "$DRY" = 1 ]; then
-        echo "[dry-run] $tool: $(echo "$pkgs" | wc -l) paquetes de $(basename "$file")"
-        return
+        printf '  [dry-run] %s\n' "$*"
+        return 0
     fi
-    if [ "$tool" = pacman ]; then
-        sudo pacman -S --needed --noconfirm - <<<"$pkgs" && return
-    else
-        yay -S --needed --noconfirm - <<<"$pkgs" && return
+    if ! "$@"; then
+        aviso "Falló: $*"
+        FAILS+=("$*")
+        return 1
     fi
-    warn "La instalacion en bloque de $(basename "$file") fallo: probando uno a uno"
-    for p in $pkgs; do
-        if [ "$tool" = pacman ]; then
-            sudo pacman -S --needed --noconfirm "$p" || warn "Paquete no instalado: $p"
-        else
-            yay -S --needed --noconfirm "$p" || warn "Paquete AUR no instalado: $p"
-        fi
+}
+
+# ---------- Aplicaciones opcionales (opcionales.txt) ----------
+OPT_ID=(); OPT_PKG=(); OPT_DESC=(); OPT_SEL=()
+
+load_opcionales() {
+    local f="$SCRIPT_DIR/opcionales.txt" id pk desc
+    [ -f "$f" ] || return 0
+    while IFS='|' read -r id pk desc; do
+        case "$id" in ''|\#*) continue ;; esac
+        OPT_ID+=("$id"); OPT_PKG+=("$pk"); OPT_DESC+=("$desc"); OPT_SEL+=(1)
+    done < "$f"
+}
+
+set_all() {  # set_all 0|1
+    local i
+    for i in "${!OPT_ID[@]}"; do OPT_SEL[$i]="$1"; done
+}
+
+show_menu() {
+    local i mark col
+    printf '\n  %sElija qué aplicaciones instalar%s\n' "$C_BOLD$C_GOLD" "$C_OFF"
+    printf '  %snúmero = marcar/desmarcar · a = todas · n = ninguna · Enter = continuar · q = salir%s\n\n' "$C_DIM" "$C_OFF"
+    for i in "${!OPT_ID[@]}"; do
+        if [ "${OPT_SEL[$i]}" = 1 ]; then mark='[x]'; col="$C_FG"; else mark='[ ]'; col="$C_DIM"; fi
+        printf '   %s%d)%s %s%s %-9s %s%s\n' "$C_GOLD" "$((i + 1))" "$C_OFF" "$col" "$mark" "${OPT_ID[$i]}" "${OPT_DESC[$i]}" "$C_OFF"
+    done
+    printf '\n  %sLa base (Hyprland, Quickshell, kitty, zsh, tema...) se instala siempre.%s\n' "$C_DIM" "$C_OFF"
+}
+
+menu_apps() {
+    local r t idx n=${#OPT_ID[@]}
+    while true; do
+        show_menu
+        read -r -p "  > " r || break
+        case "$r" in
+            '') break ;;
+            a|A) set_all 1 ;;
+            n|N) set_all 0 ;;
+            q|Q) printf 'Cancelado.\n'; exit 0 ;;
+            *)
+                for t in $r; do
+                    if [[ "$t" =~ ^[0-9]+$ ]]; then
+                        idx=$((t - 1))
+                        if (( idx >= 0 && idx < n )); then
+                            if [ "${OPT_SEL[$idx]}" = 1 ]; then OPT_SEL[$idx]=0; else OPT_SEL[$idx]=1; fi
+                        fi
+                    fi
+                done
+                ;;
+        esac
     done
 }
 
-say "3/8 Instalando los paquetes oficiales"
-install_list "$REPO/pkglist.txt" pacman
-say "3/8 Instalando los paquetes del AUR"
-if [ -f "$REPO/aur-pkglist.txt" ]; then
-    install_list "$REPO/aur-pkglist.txt" yay
+choose_apps() {
+    local a i found
+    load_opcionales
+    [ "${#OPT_ID[@]}" -gt 0 ] || return 0
+    case "$APPS_MODE" in
+        all)     set_all 1 ;;
+        minimal) set_all 0 ;;
+        list)
+            set_all 0
+            for a in ${APPS_LIST//,/ }; do
+                found=0
+                for i in "${!OPT_ID[@]}"; do
+                    if [ "${OPT_ID[$i]}" = "$a" ]; then OPT_SEL[$i]=1; found=1; fi
+                done
+                [ "$found" = 1 ] || aviso "Aplicación opcional desconocida: $a"
+            done
+            ;;
+        ask)
+            if [ -t 0 ]; then menu_apps; else set_all 1; fi
+            ;;
+    esac
+    printf '\n  Aplicaciones elegidas:'
+    for i in "${!OPT_ID[@]}"; do
+        [ "${OPT_SEL[$i]}" = 1 ] && printf ' %s' "${OPT_ID[$i]}"
+    done
+    printf '\n'
+}
+
+# Listas de paquetes filtradas: quita las apps no elegidas y, en equipo real, lo de VirtualBox.
+F_OFFICIAL=""; F_AUR=""; F_REMOVE=""
+cleanup() { rm -f "$F_OFFICIAL" "$F_AUR" "$F_REMOVE" 2> /dev/null; }
+trap cleanup EXIT
+
+build_lists() {
+    local i p
+    F_REMOVE="$(mktemp)"; F_OFFICIAL="$(mktemp)"; F_AUR="$(mktemp)"
+    for i in "${!OPT_ID[@]}"; do
+        if [ "${OPT_SEL[$i]}" = 0 ]; then
+            for p in ${OPT_PKG[$i]}; do printf '%s\n' "$p" >> "$F_REMOVE"; done
+        fi
+    done
+    [ "$MODE" = real ] && printf '%s\n' virtualbox-guest-utils >> "$F_REMOVE"
+    grep -vxFf "$F_REMOVE" "$SCRIPT_DIR/pkglist.txt" > "$F_OFFICIAL"
+    if [ -f "$SCRIPT_DIR/aur-pkglist.txt" ]; then
+        grep -vxFf "$F_REMOVE" "$SCRIPT_DIR/aur-pkglist.txt" > "$F_AUR"
+    fi
+}
+
+install_list() {  # install_list ARCHIVO COMANDO...   (instala en bloque; si falla, uno a uno)
+    local file="$1" p; shift
+    local -a pk=()
+    mapfile -t pk < <(grep -v '^[[:space:]]*#' "$file" | grep -v '^[[:space:]]*$')
+    [ "${#pk[@]}" -gt 0 ] || { aviso "Lista vacía: $(basename "$file")"; return 0; }
+    if [ "$DRY" = 1 ]; then
+        printf '  [dry-run] %s (%d paquetes)\n' "$*" "${#pk[@]}"
+        return 0
+    fi
+    if "$@" "${pk[@]}"; then
+        ok "${#pk[@]} paquetes instalados"
+    else
+        aviso "Falló la instalación en bloque; se prueba uno a uno."
+        for p in "${pk[@]}"; do
+            "$@" "$p" || { aviso "No se pudo instalar: $p"; FAILS+=("paquete $p"); }
+        done
+    fi
+}
+
+# ---------- Elección de aplicaciones ----------
+choose_apps
+build_lists
+
+# ---------- Permisos de administrador (se mantienen mientras dure el script) ----------
+if [ "$DRY" = 0 ]; then
+    printf '\n  Se necesitará su contraseña para instalar paquetes.\n'
+    sudo -v || { printf 'Sin permisos de administrador.\n'; exit 1; }
+    ( while true; do sudo -n true; sleep 50; kill -0 "$$" 2> /dev/null || exit; done ) &
 fi
 
-# --- 4. configuracion ---
-say "4/8 Copiando la configuracion"
-BK="$HOME/.config-backup-$(date +%Y%m%d-%H%M%S)"
-run mkdir -p "$BK"
-run mkdir -p "$HOME/.config"
+# ======================================================================
+paso 1 8 "Actualizando el sistema"
+run sudo pacman -Syu --noconfirm
+run sudo pacman -S --needed --noconfirm base-devel git
+
+paso 2 8 "yay (ayudante del AUR)"
+if command -v yay > /dev/null 2>&1; then
+    ok "yay ya está instalado"
+else
+    YAYDIR="$(mktemp -d)"
+    run git clone https://aur.archlinux.org/yay-bin.git "$YAYDIR/yay-bin"
+    run bash -c 'cd "$1" && makepkg -si --noconfirm' _ "$YAYDIR/yay-bin"
+fi
+
+paso 3 8 "Instalando paquetes"
+install_list "$F_OFFICIAL" sudo pacman -S --needed --noconfirm
+if [ -s "$F_AUR" ]; then
+    install_list "$F_AUR" yay -S --needed --noconfirm
+fi
+
+paso 4 8 "Copiando la configuración (copia de lo anterior en $BACKUP)"
 for d in hypr kitty quickshell gtk-3.0; do
-    if [ -d "$REPO/.config/$d" ]; then
-        [ -e "$HOME/.config/$d" ] && run cp -a "$HOME/.config/$d" "$BK/"
-        run cp -a "$REPO/.config/$d" "$HOME/.config/"
+    if [ ! -d "$SCRIPT_DIR/.config/$d" ]; then
+        aviso "Falta .config/$d en el repositorio"
+        continue
     fi
+    if [ -d "$HOME/.config/$d" ]; then
+        run mkdir -p "$BACKUP/.config"
+        run cp -a "$HOME/.config/$d" "$BACKUP/.config/"
+    fi
+    run mkdir -p "$HOME/.config/$d"
+    run cp -a "$SCRIPT_DIR/.config/$d/." "$HOME/.config/$d/"
 done
-if [ "$DRY" != 1 ] && [ -d "$HOME/.config/quickshell/scripts" ]; then
-    chmod +x "$HOME/.config/quickshell/scripts/"*.sh
-fi
 for f in .zshrc .zprofile; do
-    if [ -f "$REPO/zsh/$f" ]; then
-        [ -e "$HOME/$f" ] && run cp -a "$HOME/$f" "$BK/"
-        run cp "$REPO/zsh/$f" "$HOME/$f"
+    if [ -f "$SCRIPT_DIR/zsh/$f" ]; then
+        if [ -f "$HOME/$f" ]; then
+            run mkdir -p "$BACKUP"
+            run cp -a "$HOME/$f" "$BACKUP/"
+        fi
+        run cp -a "$SCRIPT_DIR/zsh/$f" "$HOME/$f"
     fi
 done
+run chmod +x "$HOME/.config/quickshell/scripts/"*.sh
+ok "Configuración copiada"
 
-# --- 5. servicios ---
-say "5/8 Servicios (surten efecto al reiniciar)"
+paso 5 8 "Servicios"
 run sudo systemctl enable NetworkManager
-run sudo systemctl disable systemd-networkd.service systemd-networkd.socket
+run sudo systemctl disable systemd-networkd
 run systemctl --user enable pipewire pipewire-pulse wireplumber
 
-# --- 6. ajustes del sistema ---
-say "6/8 Zona horaria y shell"
+paso 6 8 "Zona horaria y shell"
 run sudo timedatectl set-timezone Europe/Madrid
 [ "$MODE" = real ] && run sudo timedatectl set-ntp true
-run chsh -s /usr/bin/zsh
+if command -v zsh > /dev/null 2>&1 || [ "$DRY" = 1 ]; then
+    run chsh -s /usr/bin/zsh
+else
+    aviso "zsh no está instalado; no se cambia la shell."
+fi
 
-# --- 7. maquina virtual o equipo real ---
-say "7/8 Ajustes segun el tipo de equipo ($MODE)"
+paso 7 8 "Ajustes según el tipo de equipo ($MODE)"
 if [ "$MODE" = real ]; then
     run sed -i 's/env LIBGL_ALWAYS_SOFTWARE=1 //g' "$HOME/.config/hypr/hyprland.lua"
-    run sed -i "/screencopy_mode/d" "$HOME/.config/hypr/hyprlock.conf"
+    run sed -i '/screencopy_mode/d' "$HOME/.config/hypr/hyprlock.conf"
     run rm -f "$HOME/.local/share/applications/imv.desktop"
 else
     run sudo pacman -S --needed --noconfirm virtualbox-guest-utils
     run sudo systemctl enable vboxservice
-    if [ "$DRY" != 1 ] && [ -f /usr/share/applications/imv.desktop ]; then
-        mkdir -p "$HOME/.local/share/applications"
-        sed 's|^Exec=imv|Exec=env LIBGL_ALWAYS_SOFTWARE=1 imv|' /usr/share/applications/imv.desktop > "$HOME/.local/share/applications/imv.desktop"
+    if [ -f /usr/share/applications/imv.desktop ] || [ "$DRY" = 1 ]; then
+        run mkdir -p "$HOME/.local/share/applications"
+        run bash -c 'sed "s|^Exec=imv|Exec=env LIBGL_ALWAYS_SOFTWARE=1 imv|" /usr/share/applications/imv.desktop > "$HOME/.local/share/applications/imv.desktop"'
     fi
 fi
 
-# --- 8. ajustes de GTK ---
-say "8/8 Ajustes de GTK (GSettings)"
-gset() { run dbus-run-session -- gsettings set org.gnome.desktop.interface "$@"; }
-gset font-name 'JetBrainsMono Nerd Font 10'
-gset color-scheme 'prefer-dark'
-gset gtk-theme 'Adwaita-dark'
-gset cursor-size 16
+paso 8 8 "Aspecto de las aplicaciones GTK"
+run dbus-run-session -- gsettings set org.gnome.desktop.interface font-name 'JetBrainsMono Nerd Font 10'
+run dbus-run-session -- gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
+run dbus-run-session -- gsettings set org.gnome.desktop.interface gtk-theme 'Adwaita-dark'
+run dbus-run-session -- gsettings set org.gnome.desktop.interface cursor-size 16
 
-# --- final ---
-say "Terminado"
-if [ ${#FAILS[@]} -gt 0 ]; then
-    echo "Avisos (revisalos):"
-    printf ' - %s\n' "${FAILS[@]}"
+# ======================================================================
+printf '\n%s%s%s\n' "$C_GOLD" "$(rep '═' 46 2> /dev/null || printf '==============================================')" "$C_OFF"
+if [ "${#FAILS[@]}" -gt 0 ]; then
+    aviso "Hubo ${#FAILS[@]} avisos:"
+    for f in "${FAILS[@]}"; do printf '     - %s\n' "$f"; done
+else
+    ok "Instalación terminada sin avisos"
 fi
-cat <<'FIN'
 
-Pasos MANUALES que el script no puede hacer:
-  1. Reiniciar (para NetworkManager, zsh y los servicios).
-  2. Iniciar sesion de GitHub: gh auth login
-  3. Controladores de la GPU (NVIDIA, AMD o Intel) en un equipo real.
-  4. Pantallas: ajustar con la tuerca de la barra y "Conservar y guardar".
-  5. Iniciar sesion en Brave y Discord.
-Registro completo en: ~/pikson-install.log
+cat << 'FIN'
+
+  Lo que queda a mano:
+    1. Reinicie el equipo.
+    2. Si es un equipo real: instale los controladores de la GPU.
+    3. Ajuste los monitores desde la tuerca de la barra.
+    4. Vuelva a iniciar sesión en Brave y Discord.
+    5. Al entrar en el TTY1, Hyprland arranca solo.
+
+  Registro completo: ~/pikson-install.log
 FIN

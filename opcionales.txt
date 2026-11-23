@@ -1,0 +1,6 @@
+# id|paquetes (separados por espacios)|descripción
+brave|brave-bin|Navegador Brave
+discord|discord|Chat de Discord
+thunar|thunar thunar-volman gvfs tumbler|Gestor de archivos (Thunar)
+imv|imv|Visor de imágenes
+spotify|spotify-launcher|Spotify (cliente de escritorio)
